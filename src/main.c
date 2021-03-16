@@ -64,7 +64,7 @@ void hsb_demo(push_device* push){
     place_text(push, "Hello Nichol", 0, 3);
     set_all_pads(push, 0, hsb(h, s, b), BLINK_OFF);
 
-    update_push(push); // TODO: kill yourself
+    update_push(push);
     //msleep(1);
   }
 }
