@@ -1,4 +1,4 @@
 #!/bin/bash
 
 make debug
-sudo gdb bin/push
+sudo gdb debug/push

@@ -8,12 +8,12 @@ keyboard* create_keyboard();
 
 #ifndef CREAT_KEY
 #define CREAT_KEY
-key* create_key(char* keyboard_command, int key_id, activator* activate, activator* deactivate, int animation_type);
+key* create_key(char* keyboard_command, int key_id, activator* activate, activator* deactivate);
 #endif
 
 #ifndef ADD_PAD_KEY
 #define ADD_PAD_KEY
-void add_pad_key(push_device* push, int id, keyboard* keyboard, char* keyboard_command, int layer, int pad_x, int pad_y, unsigned char color, int type, bool continues);
+void add_pad_key(push_device* push, int id, keyboard* keyboard, char* keyboard_command, int pad_x, int pad_y);
 #endif
 
 #ifndef ADD_BTN_KEY

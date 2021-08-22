@@ -23,7 +23,7 @@ void add_knob(push_device* push, int refrence_id, int knob_id, float start_val, 
 
 #ifndef ALL_BTN_STUFF
 #define ALL_BTN_STUFF
-void add_pad_key_push(push_device* push, int key_id, char* keyboard_command, int layer, int pad_x, int pad_y, unsigned char color, int type, bool continues);
+void add_pad_key_push(push_device* push, int key_id, char* keyboard_command, int pad_x, int pad_y);
 void add_btn_key_push(push_device* push, char* keyboard_command, int id);
 #endif
 
@@ -35,21 +35,12 @@ void receive_update(push_device* push);
 
 #ifndef LAYER_STUFF_IN_PUSH
 #define LAYER_STUFF_IN_PUSH
-void new_layer(push_device* push, int layer_num);
-void remove_layer(push_device* push, int layer_num);
-void add_animation_to_layer(push_device* push, animation* a, int layer_num);
-void add_animation_triger_to_push(push_device* push, int animation_type, int min_x, int max_x, int min_y, int max_y, unsigned char animation_color, int layer_num, int id);
-animation_triger* get_animation_triger(push_device* push, int layer_num, int id);
+void create_new_layer(push_device* push, unsigned int layer_num);
 #endif
 
 #ifndef LIGHT_PAD_STUFF
 #define LIGHT_PAD_STUFF
-int add_animation(push_device* push, animation* a, int layer_num);
-void light_pad_xy(push_device* push, int layer, unsigned int color, unsigned char blink, int x, int y);
-void light_pad_id(push_device* push, int layer, unsigned int color, unsigned char blink, int id);
-void set_all_pads(push_device* push, int layer, unsigned int color, unsigned char blink);
-void clear_all_backgrounds(push_device* push);
-void clear_layer_background(push_device* push, int layer_num);
+
 #endif
 
 #ifndef BUILD_UPDATE

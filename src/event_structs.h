@@ -36,27 +36,21 @@ enum EVENT_CLASS{
 typedef struct event{
   struct event* next_event;
   struct event* prev_event;
-  unsigned int data;
-  unsigned char event_class;
 
-  //pad data
+  float slider_percent;
+  unsigned int slider_value;
+  unsigned int data;
+  int knob_delta;
   int pad_x;
   int pad_y;
+
   unsigned char pad_velocity;
   unsigned char pad_state;
-
-  //button data
+  unsigned char knob_state;
+  unsigned char knob_id;
   unsigned char btn_id;
   unsigned char btn_state;
-
-  //knob data
-  unsigned char knob_id;
-  int knob_delta;
-  unsigned char knob_state;
-
-  //slider data
-  unsigned int slider_value;
   unsigned char slider_state;
-  float slider_percent;
+  unsigned char event_class;
 }event;
 #endif

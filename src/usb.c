@@ -16,7 +16,7 @@ void print_device(libusb_device *dev){
   const struct libusb_endpoint_descriptor *endpoint_desc;
 
   int ret;
-
+  printf("asd\n");
   ret = libusb_get_device_descriptor(dev, &desc);
 
   if(ret < 0){

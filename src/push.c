@@ -5,7 +5,6 @@
 #include"push_structs.h"
 #include<stdlib.h>
 #include<stdio.h>
-#include"layer_structs.h"
 #include"colors.h"
 #include"signals.h"
 #include"event.h"
@@ -17,24 +16,14 @@
 #include"stdbool.h"
 #include"text_structs.h"
 #include"text.h"
-#include"animation.h"
-#include"layer_manager_structs.h"
-#include"layer_manager.h"
-#include"layer_structs.h"
-#include"layer.h"
-#include"animation_triger_structs.h"
-#include"animation_triger.h"
+#include"pad_manager.h"
+#include"pad_manager_structs.h"
 
 const int knob_text_len = 8;
 const int chunk_size = 128;
 
-animation_triger* get_animation_triger(push_device* push, int layer_num, int id){
-  return get_animation_triger_lm(push->lm, layer_num, id);
-}
-
-void add_animation_triger_to_push(push_device* push, int animation_type, int min_x, int max_x, int min_y, int max_y, unsigned char animation_color, int layer_num, int id){
-  animation_triger* at = create_animation_triger(animation_type, min_x, max_x, min_y, max_y, animation_color, id);
-  add_animation_triger_to_manager(push->lm, at, layer_num);
+void create_new_layer(push_device* push, unsigned int layer_num){
+  new_layer(push->pm, layer_num);
 }
 
 void add_scrolling_text(push_device* push, int id, int x, int y, char* text, int size, float speed){
@@ -151,16 +140,12 @@ void add_knob(push_device* push, int refrence_id, int knob_id, float start_val, 
   free(prev);
 }
 
-void add_pad_key_push(push_device* push, int key_id, char* keyboard_command, int layer, int pad_x, int pad_y, unsigned char color, int type, bool continues){
-  add_pad_key(push, key_id, push->keyboard_manager, keyboard_command, layer, pad_x, pad_y, color, type, continues);
+void add_pad_key_push(push_device* push, int key_id, char* keyboard_command, int pad_x, int pad_y){
+  add_pad_key(push, key_id, push->keyboard_manager, keyboard_command, pad_x, pad_y);
 }
 
 void add_btn_key_push(push_device* push, int key_id, char* keyboard_command, int id){
   add_btn_key(push, key_id, push->keyboard_manager, keyboard_command, id);
-}
-
-int add_animation(push_device* push, animation* a, int layer_num){
-  return add_animation_to_layer(push->lm, a, layer_num);
 }
 
 void flatten_layers(push_device* push){
@@ -170,7 +155,7 @@ void flatten_layers(push_device* push){
   int id;
 
 
-  if(push->lm->layers == NULL){
+  if(push->pm->active_layers_count == 0){
     for(int x = 0; x < 8; x++){
       for(int y = 0; y < 8; y++){
         ny = y + push->dy;
@@ -180,79 +165,29 @@ void flatten_layers(push_device* push){
           push->pad_color_new[y * 8 + x] = OUT_OF_BOUNDS_COLOR;
           push->pad_blink_new[y * 8 + x] = OUT_OF_BOUNDS_BLINK;
         } else {
-          push->pad_color_new[y * 8 + x] = 0;
+          push->pad_color_new[y * 8 + x] = BLACK;
           push->pad_blink_new[y * 8 + x] = BLINK_OFF;
         }
       }
     }
     return;
   }
-
-  update_layers(push->lm);
-
+  update_layers(push->pm);
   for(int x = 0; x < 8; x++){
     for(int y = 0; y < 8; y++){
       ny = y + push->dy;
       nx = x + push->dx;
-      id = ny * push->height + nx;
+      id = ny * push->pm->size_x + nx;
       if(ny < 0 || nx < 0 || nx >= push->width || ny >= push->height){
         push->pad_color_new[y * 8 + x] = OUT_OF_BOUNDS_COLOR;
         push->pad_blink_new[y * 8 + x] = OUT_OF_BOUNDS_BLINK;
       } else {
-        push->pad_color_new[y * 8 + x] = push->lm->color_buff[id];
-        push->pad_blink_new[y * 8 + x] = push->lm->blink_buff[id];
+        push->pad_color_new[y * 8 + x] = push->pm->color_buff[id];
+        push->pad_blink_new[y * 8 + x] = push->pm->blink_buff[id];
       }
     }
   }
 
-}
-
-void new_layer(push_device* push, int layer_num){
-  create_new_layer(push->lm, layer_num);
-}
-
-void clear_all_backgrounds(push_device* push){
-  clear_layer_backgrounds(push->lm);
-}
-
-void clear_layer_background(push_device* push, int layer_num){
-  struct layer* l = get_layer_from_manager(push->lm, layer_num);
-  if(l){
-    clear_background_layer(l);
-  }
-}
-
-void light_pad_id(push_device* push, int layer, unsigned char color, unsigned char blink, int id){
-
-  if(push == NULL || id < 0 || id > push->width * push->height){
-    return;
-  }
-
-  struct layer* l = get_layer_from_manager(push->lm, layer);
-  if(l){
-    l->pad_color_const[id] = color;
-    l->pad_blink_const[id] = blink;
-  }
-
-}
-
-void light_pad_xy(push_device* push, int layer, unsigned char color, unsigned char blink, int x, int y){
-
-  if(x >= push->width || x < 0 || y >= push->height){
-    return;
-  }
-
-  light_pad_id(push, layer, color, blink, x + y * 8);
-}
-
-void set_all_pads(push_device* push, int layer, unsigned char color, unsigned char blink){
-  struct layer* l = get_layer_from_manager(push->lm, layer);
-  if(l){
-    for(int i = 0; i < l->width * l->height; i++){
-      l->pad_color_const[i] = color;
-      l->pad_blink_const[i] = blink;
-    }
-  }
 }
 
 void build_update(push_device* push){
@@ -275,7 +210,7 @@ void build_update(push_device* push){
       val ^= ((unsigned int)push->pad_color_new[i]) << 24;//color in byte 3
       val ^= (i + 0x24) << 16;//pad id in byte 2
       val ^= ((unsigned int)push->pad_blink_new[i]) << 8;
-      val ^= ((unsigned int)push->pad_status_new[i]);//status in byte 0
+      val ^= ((unsigned int)push->pad_status_new[i]);//status in byte 0 always value 0x69
 
       *(unsigned int*)(push->out_signal+update_index) = val;
       update_index += 4; //add 4 for an int
@@ -328,15 +263,6 @@ void build_update(push_device* push){
 }
 
 void send_update(push_device* push){
-  //printf("sending %i bytes\n", push->out_signal_size);
-  /*
-  for(int i = 0; i < push->out_signal_size; ){
-    printf("%02x ", push->out_signal[i++]);
-    printf("%02x ", push->out_signal[i++]);
-    printf("%02x ", push->out_signal[i++]);
-    printf("%02x\n", push->out_signal[i++]);
-  }
-  */
   int i = 0;
   int size, left;
   while(i * chunk_size < push->out_signal_size){
@@ -415,12 +341,21 @@ void parse_update(push_device* push){
   push->in_signal_size = 0;
 }
 
+char check_event_is_power_button(event* e){
+  return e->btn_id == 3 && e->event_class == BUTTON_EVENT && e->btn_state == BUTTON_RELEASE_EVENT;
+}
+
 void process_events(push_device* push){
   if(push == NULL || push->event_head == NULL){
     return;
   }
+
   event* e = pop_event(push);
   while(e != NULL){
+    //print_event(e);
+    if(check_event_is_power_button(e)){
+      push->turn_off = true;
+    }
 
     //printf("0x%08x ", e->data);
     //STUFF HERE
@@ -431,15 +366,10 @@ void process_events(push_device* push){
     }
 
     handle_key_event(push, e, push->keyboard_manager);
-    parse_event_lm(push->lm, e);
-    //print_event(e);
+    parse_event_pm(push->pm, e);
     e = pop_event(push);
   }
   //printf("\n");
-}
-
-void remove_layer(push_device* push, int layer_num){
-  remove_layer_from_manager(push->lm, layer_num);
 }
 
 void receive_update(push_device* push){
@@ -466,10 +396,8 @@ void free_push(push_device* push){
   free(push->pad_blink_curr);
   free(push->pad_status_curr);
 
-
   free(push->in_signal);
   free(push->out_signal);
-
 
   if(push->knobs){
     for(unsigned int i = 0; i < push->num_knobs; i++){
@@ -479,6 +407,7 @@ void free_push(push_device* push){
   }
   free_keyboard(push->keyboard_manager);
   free_events(push);
+  free_pad_manager(push->pm);
   free(push);
 }
 
@@ -510,11 +439,11 @@ push_device* create_push_device(usb_device* dev, int width, int height){
 
   push->out_max_size = PUSH_OUT_SIZE;
   push->out_signal_size = 0;
-  push->out_signal = (unsigned char*)malloc(PUSH_OUT_SIZE * sizeof(unsigned char*));
+  push->out_signal = (unsigned char*)malloc(PUSH_OUT_SIZE * sizeof(unsigned char));
 
   push->in_max_size = PUSH_IN_SIZE;
   push->in_signal_size = 0;
-  push->in_signal = (unsigned char*)malloc(PUSH_IN_SIZE * sizeof(unsigned char*));
+  push->in_signal = (unsigned char*)malloc(PUSH_IN_SIZE * sizeof(unsigned char));
 
   push->width = width;
   push->height = height;
@@ -541,7 +470,9 @@ push_device* create_push_device(usb_device* dev, int width, int height){
   push->scrolling_text_objects = NULL;
   push->num_scrolling_text = 0;
 
-  push->lm = create_layer_manager(push->width, push->height);
+  push->num_of_layers = 32;
+  push->pm = create_pad_manager(push->width, push->height, push->num_of_layers);
+  push->turn_off = false;
   update_push(push);
 
   get_update(push);

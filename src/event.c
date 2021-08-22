@@ -39,7 +39,7 @@ event* create_event(unsigned int data, push_device* push){
 
     e->pad_state = b4;
     e->pad_velocity = b1;
-
+    
   } else if((b1 == BUTTON_PRESS_EVENT || b1 == BUTTON_RELEASE_EVENT) && b4 == BUTTON_TAG && (b2 > 0x0f || b2 < 0x0e) && (b2 > 0x4f || b2 < 0x47)){//is a btn
     e->event_class = BUTTON_EVENT;
     e->btn_id = b2;

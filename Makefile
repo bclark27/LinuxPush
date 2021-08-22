@@ -1,7 +1,7 @@
 # tool macros
 CC := gcc# FILL: the compiler
 CCFLAGS := # FILL: compile flags
-DBGFLAGS := -g
+DBGFLAGS := -Wall -Werror -g
 CCOBJFLAGS := $(CCFLAGS) -c
 
 # path macros
@@ -44,7 +44,7 @@ $(DBG_PATH)/%.o: $(SRC_PATH)/%.c*
 	$(CC) $(CCOBJFLAGS) $(DBGFLAGS) -o $@ $<
 
 $(TARGET_DEBUG): $(OBJ_DEBUG)
-	$(CC) $(CCFLAGS) $(DBGFLAGS) $(OBJ_DEBUG) -o $@
+	$(CC) $(CCFLAGS) $(DBGFLAGS) $(OBJ_DEBUG) -o $@  -lusb-1.0
 
 # phony rules
 .PHONY: makedir

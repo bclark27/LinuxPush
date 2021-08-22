@@ -5,8 +5,6 @@
 #include<string.h>
 #include"event_structs.h"
 #include"push_structs.h"
-#include"animation.h"
-#include"animation_structs.h"
 #include"push.h"
 
 bool check_activity(activator* a, event* e){
@@ -14,6 +12,7 @@ bool check_activity(activator* a, event* e){
   if(a->event_class != e->event_class) return false;
 
   if(a->event_class == PAD_EVENT){  //check pad event
+    //printf("HELLO: %i,%i,%i,%i\n",e->event_class, e->pad_state, e->pad_x, e->pad_y);
     if(a->state == e->pad_state && a->pad_x == e->pad_x && a->pad_y == e->pad_y){
       return true;
     }
@@ -62,12 +61,10 @@ key* create_key(char* keyboard_command, int key_id, activator* activate, activat
   k->activate = activate;
   k->deactivate = deactivate;
   k->id = key_id;
-  k->animation_type = NO_ANIMATION;
-  k->animation_action = NULL;
   return k;
 }
 
-void add_pad_key(push_device* push, int id, keyboard* keyboard, char* keyboard_command, int layer, int pad_x, int pad_y, unsigned char color, int type, bool continues){
+void add_pad_key(push_device* push, int id, keyboard* keyboard, char* keyboard_command, int pad_x, int pad_y){
   if(keyboard == NULL){
     return;
   }
@@ -85,14 +82,9 @@ void add_pad_key(push_device* push, int id, keyboard* keyboard, char* keyboard_c
   d->state = PAD_RELEASE_EVENT;
 
   key* new_key = create_key(keyboard_command, id, a, d);
-  new_key->animation_type = type;
-  new_key->animation_action = NULL;
-  if(type != NO_ANIMATION){
-    new_key->animation_x = pad_x;
-    new_key->animation_y = pad_y;
-    new_key->animation_layer = layer;
-    new_key->animation_color = color;
-  }
+
+  //printf("%i,%i,%i,%i\n",a->event_class,a->state, a->pad_x, a->pad_y);
+
   add_key(keyboard, new_key);
 }
 
@@ -132,17 +124,6 @@ void preform_key_press(push_device* push, event* e, key* key){
       }
       int a = system(KEY_DOWN_CMD_STR);
     }
-    //add animation
-    if(key->animation_type != NO_ANIMATION){
-      key->animation_action = create_animation(key->animation_x, key->animation_y, key->animation_color, key->animation_type);
-      key->animation_action->ref_count++;
-      int ret = add_animation(push, key->animation_action, key->animation_layer);
-      if(ret == 0){
-        free_animation(key->animation_action);
-        key->animation_action = NULL;
-      }
-      //printf("ok\n");
-    }
 
     key->is_pressed = true;
   } else if(check_activity(key->deactivate, e)){
@@ -156,13 +137,6 @@ void preform_key_press(push_device* push, event* e, key* key){
       }
       int a = system(KEY_UP_CMD_STR);
     }
-    //remove animation
-    if(key->animation_type != NO_ANIMATION && key->animation_action != NULL){
-      key->animation_action->ref_count--;
-      key->animation_action->done = true;
-      key->animation_action = NULL;
-    }
-
     key->is_pressed = false;
   }
 }

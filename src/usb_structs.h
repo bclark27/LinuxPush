@@ -2,12 +2,12 @@
 
 #ifndef USB_DEVICE
 #define USB_DEVICE
-typedef struct usb_device{
+typedef struct usb_device {
+  libusb_device_handle *handle;
+  libusb_device *device;
   int interface;
   int productID;
   int vendorID;
-  libusb_device_handle *handle;
-  libusb_device *device;
   int endpoint_in_address;
   int endpoint_out_address;
 

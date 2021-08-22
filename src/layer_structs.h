@@ -1,20 +1,10 @@
-#include<stdbool.h>
-#include"animation_structs.h"
-#include"animation_triger_structs.h"
 
-#ifndef LAYER
-#define LAYER
+#include<stdbool.h>
+#ifndef LAYER_STRUCTS
+#define LAYER_STRUCTS
 typedef struct layer{
-  struct layer* next_layer;
-  struct layer* prev_layer;
-  unsigned char* pad_color_const;
-  unsigned char* pad_blink_const;
-  int layer_num;
+  unsigned int size_x;
+  unsigned int size_y;
   bool is_active;
-  bool is_in_trash;
-  int width;
-  int height;
-  animation* animation_head;
-  animation_triger* animation_triger_head;
 }layer;
 #endif
