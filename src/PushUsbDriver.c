@@ -1,0 +1,247 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <libusb-1.0/libusb.h>
+#include <string.h>
+
+#include "PushUsbDriver.h"
+
+#define WAIT_TIME 7
+
+/////////////
+//  TYPES  //
+/////////////
+
+typedef struct usbDevice
+{
+  libusb_device_handle *handle;
+  libusb_device *device;
+  int interface;
+  int productID;
+  int vendorID;
+  int endpoint_in_address;
+  int endpoint_out_address;
+} usbDevice;
+
+////////////////////
+//  PRIVATE VARS  //
+////////////////////
+
+static usbDevice instance;
+static usbDevice * self = &instance;
+
+/////////////////////////////
+//  FUNCTION DECLERATIONS  //
+/////////////////////////////
+
+static void print_device(libusb_device *dev);
+
+///////////////////////
+// PUBLIC FUNCTIONS  //
+///////////////////////
+
+void pushUsbDevice_init(int interface, int productID, int vendorID, libusb_context *context)
+{
+  memset(self, 0, sizeof(usbDevice));
+  self->interface = interface;
+  self->productID = productID;
+  self->vendorID = vendorID;
+  //libusb_context *context = NULL;
+  //libusb_init(&context);
+  // discover devices
+  libusb_device **list;
+
+  ssize_t cnt = libusb_get_device_list(context, &list);
+  if (cnt < 0)
+  {
+      printf("NO LIST\n");
+  }
+
+  int found = 0;
+  for (int i = 0; i < cnt; i++)
+  {
+    libusb_device *device = list[i];
+    struct libusb_device_descriptor desc;
+
+    libusb_get_device_descriptor(device, &desc);
+    if(desc.idVendor == self->vendorID && desc.idProduct == self->productID){
+      //print_device(device);
+      self->device = device;
+
+      found = 1;
+      break;
+    }
+  }
+
+  if(!found)
+  {
+    printf("not there bud\n");
+    exit(1);
+  }
+
+  libusb_free_device_list(list, 1);
+
+  self->handle = libusb_open_device_with_vid_pid(context, self->vendorID, self->productID);
+  if(!self->handle)
+  {
+    printf("could not get device handle (run with sudo?)\n");
+    exit(1);
+  }
+  //detach kernel to claim interface
+  libusb_detach_kernel_driver(self->handle, self->interface);
+  //clain interface and read code
+  libusb_claim_interface(self->handle, self->interface);
+  //printf("Claim interface code: %d\n", err);
+
+  //get endpoint adresses
+  struct libusb_config_descriptor *config;
+  const struct libusb_interface *inter;
+  const struct libusb_interface_descriptor *inter_desc;
+  const struct libusb_endpoint_descriptor *endpoint_desc;
+
+  libusb_get_config_descriptor(self->device, 0, &config);
+  inter = &config->interface[self->interface];
+  inter_desc = &inter->altsetting[0];
+  endpoint_desc = &inter_desc->endpoint[0];
+  self->endpoint_out_address = endpoint_desc->bEndpointAddress;
+  endpoint_desc = &inter_desc->endpoint[1];
+  self->endpoint_in_address = endpoint_desc->bEndpointAddress;
+  //endpoint_desc->bEndpointAddress;
+}
+
+int read_data(unsigned char* data, int size)
+{
+  if(size < 8)
+  {
+    return 0;
+  }
+
+  int actual = 0; //used to find out how many bytes were written
+  int r = libusb_bulk_transfer(self->handle, (self->endpoint_in_address | LIBUSB_ENDPOINT_IN), data, size, &actual, WAIT_TIME);
+  //printf("Primer: %d\n", actual);
+
+  if(actual == 0){
+    return 0;
+  }
+
+  if(r == 0)
+  {
+    //data read
+  }
+  else if(r == -7)
+  {
+    //printf("Read request timed out\nAmount read: %d\n", actual);
+    return 0;
+  }
+  else
+  {
+    printf("Read Error code: %d\nAmount read: %d\n", r, actual);
+  }
+
+  r = libusb_bulk_transfer(self->handle, (self->endpoint_in_address | LIBUSB_ENDPOINT_IN), data+4, size-4, &actual, WAIT_TIME);
+  //printf("Second: %d\n", actual);
+  if(r == 0)
+  {
+    //data read
+  }
+  else if(r == -7)
+  {
+    //time out, still return the first few bytes
+  }
+  else
+  {
+    printf("Read Error code: %d\nAmount read: %d\n", r, actual);
+  }
+
+  //printf("Return: %d\n", actual+4);
+  return actual + 4;
+}
+
+int send_data(unsigned char* data, int size)
+{
+  if(size == 0 || !self)
+  {
+    return 0;
+  }
+  int actual; //used to find out how many bytes were written
+  int r = libusb_bulk_transfer(self->handle, (self->endpoint_out_address | LIBUSB_ENDPOINT_OUT), data, size, &actual, WAIT_TIME); //my device's out endpoint was 2, found with trial- the device had 2 endpoints: 2 and 129
+//printf("%i\n", actual);
+  if(r == 0 && actual == size){
+    //data writen
+  } else {
+    printf("Write Error code: %d\nAmount sent: %d\n", r, actual);
+  }
+  return actual;
+}
+
+void freeUsb()
+{
+  if(self->handle)
+  {
+    if(self->interface)
+    {
+      libusb_release_interface(self->handle, self->interface);
+    }
+    libusb_close(self->handle);
+  }
+}
+
+//////////////////////////
+//     PRIVATE FUNCS    //
+//////////////////////////
+
+static void print_device(libusb_device *dev)
+{
+  printf("\n");
+
+  struct libusb_device_descriptor desc;
+  struct libusb_config_descriptor *config;
+  const struct libusb_interface *inter;
+  const struct libusb_interface_descriptor *inter_desc;
+  const struct libusb_endpoint_descriptor *endpoint_desc;
+
+  int ret;
+  printf("asd\n");
+  ret = libusb_get_device_descriptor(dev, &desc);
+
+  if(ret < 0)
+  {
+    printf("Error could not get device descriptor\n");
+    return;
+  }
+
+  printf("Num of posible configs: %d\n", desc.bNumConfigurations);
+  printf("Device class: %d\n", desc.idVendor);
+  printf("Product ID: %d\n", desc.idProduct);
+
+  libusb_get_config_descriptor(dev, 0, &config);
+
+  printf("Num of interfaces: %d\n", config->bNumInterfaces);
+
+  for(int i = 0; i < config->bNumInterfaces; i++)
+  {
+    printf("|\n");
+    printf("+--Interface: %d\n", i);
+    printf("|  |\n");
+    inter = &config->interface[i];
+    printf("|  +--Number of alt settings: %d\n", inter->num_altsetting);
+    for(int j = 0; j < inter->num_altsetting; j++)
+    {
+      printf("|     |\n");
+      printf("|     +--Alt setting: %d\n", j);
+      inter_desc = &inter->altsetting[j];
+      printf("|     |  |\n");
+      printf("|     |  +--Num of endpoints: %d\n", inter_desc->bNumEndpoints);
+      for(int k = 0; k < inter_desc->bNumEndpoints; k++)
+      {
+        endpoint_desc = &inter_desc->endpoint[k];
+        printf("|     |  |  |\n");
+        printf("|     |  |  +--Endpoint: %d\n", k);
+        printf("|     |  |  |  |\n");
+        printf("|     |  |  |  +--Desc type: %d\n", endpoint_desc->bDescriptorType);
+        printf("|     |  |  |  +--Endpoint Address: %d\n", endpoint_desc->bEndpointAddress);
+      }
+    }
+  }
+  printf("\n");
+  libusb_free_config_descriptor(config);
+}
