@@ -5,7 +5,7 @@
 //  TYPES  //
 /////////////
 
-enum ColorStates {
+typedef enum ColorStates {
   ColorStates_CLEAR = (unsigned char)0xff,
   ColorStates_BLACK = (unsigned char)0,
   ColorStates_DARK_GRAY = (unsigned char)1,
@@ -21,7 +21,7 @@ enum ColorStates {
   ColorStates_DIM_GREEN = (unsigned char)23,
 
   ColorStates_OutOfBounds = ColorStates_RED,
-};
+} ColorStates;
 
 enum BlinkStates {
   BlinkStates_BlinkOff = (unsigned char)0,

@@ -10,8 +10,9 @@
 //  TYPES  //
 /////////////
 
-#define DATA_IN_SIZE 4096
-#define DATA_OUT_SIZE 4096
+#define MULT            8
+#define DATA_IN_SIZE    (4096 * MULT)
+#define DATA_OUT_SIZE   (4096 * MULT)
 
 typedef struct EventManager
 {
@@ -79,7 +80,7 @@ static EventManager * self = &instance;
 //  PUBLIC FUNCTIONS  //
 ////////////////////////
 
-char pushEventManagerInit()
+char pushEventManager_init()
 {
   memset(self, 0, sizeof(EventManager));
 
@@ -109,7 +110,7 @@ char pushEventManagerInit()
   return 0;
 }
 
-void freePushEventManager()
+void pushEventManager_free()
 {
   freeSubscriptionChain(self->newEventPacketSubscriptionChain);
   freeSubscriptionChain(self->newPadSubscriptionChain);
@@ -124,7 +125,7 @@ void freePushEventManager()
   freePushEventPacketChain(self->pushKnobPacketChain);
 }
 
-void readNewUsbData()
+void pushEventManager_readNewUsbData()
 {
   self->readAmount = read_data(self->dataInBuffer, DATA_IN_SIZE);
   if(self->readAmount)
@@ -133,7 +134,7 @@ void readNewUsbData()
   }
 }
 
-void useNewPackets()
+void pushEventManager_useNewPackets()
 {
   sendPushPackets();
   sendPadPackets();
@@ -142,62 +143,62 @@ void useNewPackets()
   sendSliderPackets();
 }
 
-char subscribeToNewPushPackets(void * subscriber, EventHandle handle)
+char pushEventManager_subscribeToNewPushPackets(void * subscriber, EventHandle handle)
 {
   return addSubscription(self->newEventPacketSubscriptionChain, subscriber, handle);
 }
 
-void unsubscribeToNewPushPackets(void * subscriber)
+void pushEventManager_unsubscribeToNewPushPackets(void * subscriber)
 {
   removeSubscription(self->newEventPacketSubscriptionChain, subscriber);
 }
 
-char subscribeToNewPadPackets(void * subscriber, EventHandle handle)
+char pushEventManager_subscribeToNewPadPackets(void * subscriber, EventHandle handle)
 {
   return addSubscription(self->newPadSubscriptionChain, subscriber, handle);
 }
 
-void unsubscribeToNewPadPackets(void * subscriber)
+void pushEventManager_unsubscribeToNewPadPackets(void * subscriber)
 {
   removeSubscription(self->newPadSubscriptionChain, subscriber);
 }
 
-char subscribeToNewSliderPackets(void * subscriber, EventHandle handle)
+char pushEventManager_subscribeToNewSliderPackets(void * subscriber, EventHandle handle)
 {
   return addSubscription(self->newSliderSubscriptionChain, subscriber, handle);
 }
 
-void unsubscribeToNewSliderPackets(void * subscriber)
+void pushEventManager_unsubscribeToNewSliderPackets(void * subscriber)
 {
   removeSubscription(self->newSliderSubscriptionChain, subscriber);
 }
 
-char subscribeToNewButtonPackets(void * subscriber, EventHandle handle)
+char pushEventManager_subscribeToNewButtonPackets(void * subscriber, EventHandle handle)
 {
   return addSubscription(self->newButtonSubscriptionChain, subscriber, handle);
 }
 
-void unsubscribeToNewButtonPackets(void * subscriber)
+void pushEventManager_unsubscribeToNewButtonPackets(void * subscriber)
 {
   removeSubscription(self->newButtonSubscriptionChain, subscriber);
 }
 
-char subscribeToNewKnobPackets(void * subscriber, EventHandle handle)
+char pushEventManager_subscribeToNewKnobPackets(void * subscriber, EventHandle handle)
 {
   return addSubscription(self->newKnobSubscriptionChain, subscriber, handle);
 }
 
-void unsubscribeToNewKnobPackets(void * subscriber)
+void pushEventManager_unsubscribeToNewKnobPackets(void * subscriber)
 {
   removeSubscription(self->newKnobSubscriptionChain, subscriber);
 }
 
-PktType packetType(void * pkt)
+PktType pushEventManager_packetType(void * pkt)
 {
   return *(unsigned char *)pkt;
 }
 
-void printPushPacket(void * pkt)
+void pushEventManager_printPushPacket(void * pkt)
 {
   unsigned char type = *(unsigned char *)pkt;
   switch(type)
@@ -363,7 +364,7 @@ static padPacket * pushPktToPadPkt(pushEventPacket * pkt)
 
   padPkt->pktType = PAD_PKT_TYPE;
   padPkt->data = pkt->data;
-  padPkt->id = pkt->pad_x + 8 *pkt->pad_y;
+  padPkt->id = pkt->pad_x + 8 * pkt->pad_y;
   padPkt->padX = pkt->pad_x;
   padPkt->padY = pkt->pad_y;
   padPkt->isPress = pkt->pad_state == PAD_PRESS ? 1 : 0;
@@ -424,27 +425,27 @@ static void digestPacket(pushEventPacket * pkt)
   switch(pkt->event_class)
   {
     case PAD_EVENT: ;
-    padPacket * padPkt = pushPktToPadPkt(pkt);
-    if(padPkt) queue(self->pushPadPacketChain, padPkt);
-    return;
+      padPacket * padPkt = pushPktToPadPkt(pkt);
+      if(padPkt) queue(self->pushPadPacketChain, padPkt);
+      return;
 
     case BUTTON_EVENT: ;
-    buttonPacket * buttonPkt = pushPktToButtonPkt(pkt);
-    if(buttonPkt) queue(self->pushButtonPacketChain, buttonPkt);
-    return;
+      buttonPacket * buttonPkt = pushPktToButtonPkt(pkt);
+      if(buttonPkt) queue(self->pushButtonPacketChain, buttonPkt);
+      return;
 
     case KNOB_EVENT: ;
-    knobPacket * knobPkt = pushPktToKnobPkt(pkt);
-    if(knobPkt) queue(self->pushKnobPacketChain, knobPkt);
-    return;
+      knobPacket * knobPkt = pushPktToKnobPkt(pkt);
+      if(knobPkt) queue(self->pushKnobPacketChain, knobPkt);
+      return;
 
     case SLIDER_EVENT: ;
-    sliderPacket * sliderPkt = pushPktToSliderPkt(pkt);
-    if(sliderPkt) queue(self->pushSliderPacketChain, sliderPkt);
-    return;
+      sliderPacket * sliderPkt = pushPktToSliderPkt(pkt);
+      if(sliderPkt) queue(self->pushSliderPacketChain, sliderPkt);
+      return;
 
     default:
-    return;
+      return;
   }
 }
 

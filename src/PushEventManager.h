@@ -104,28 +104,28 @@ typedef struct sliderPacket
 //  PUBLIC FUNCTIONS  //
 ////////////////////////
 
-char pushEventManagerInit();
-void freePushEventManager();
-void readNewUsbData();
-void useNewPackets();
+char pushEventManager_init();
+void pushEventManager_free();
+void pushEventManager_readNewUsbData();
+void pushEventManager_useNewPackets();
 
-char subscribeToNewPushPackets(void * subscriber, EventHandle handle);
-void unsubscribeToNewPushPackets(void * subscriber);
+char pushEventManager_subscribeToNewPushPackets(void * subscriber, EventHandle handle);
+void pushEventManager_unsubscribeToNewPushPackets(void * subscriber);
 
-char subscribeToNewPadPackets(void * subscriber, EventHandle handle);
-void unsubscribeToNewPadPackets(void * subscriber);
+char pushEventManager_subscribeToNewPadPackets(void * subscriber, EventHandle handle);
+void pushEventManager_unsubscribeToNewPadPackets(void * subscriber);
 
-char subscribeToNewSliderPackets(void * subscriber, EventHandle handle);
-void unsubscribeToNewSliderPackets(void * subscriber);
+char pushEventManager_subscribeToNewSliderPackets(void * subscriber, EventHandle handle);
+void pushEventManager_unsubscribeToNewSliderPackets(void * subscriber);
 
-char subscribeToNewButtonPackets(void * subscriber, EventHandle handle);
-void unsubscribeToNewButtonPackets(void * subscriber);
+char pushEventManager_subscribeToNewButtonPackets(void * subscriber, EventHandle handle);
+void pushEventManager_unsubscribeToNewButtonPackets(void * subscriber);
 
-char subscribeToNewKnobPackets(void * subscriber, EventHandle handle);
-void unsubscribeToNewKnobPackets(void * subscriber);
+char pushEventManager_subscribeToNewKnobPackets(void * subscriber, EventHandle handle);
+void pushEventManager_unsubscribeToNewKnobPackets(void * subscriber);
 
-PktType packetType(void * pkt);
+PktType pushEventManager_packetType(void * pkt);
 
-void printPushPacket(void * pkt);
+void pushEventManager_printPushPacket(void * pkt);
 
 #endif

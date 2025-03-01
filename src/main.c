@@ -1,79 +1,123 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "PushUsbDriver.h"
-#include "SystemManager.h"
+#include "OutputMessageBuilder.h"
 #include "PushEventManager.h"
-#include "PhysicalPushInputState.h"
-#include "PhysicalPushOutputState.h"
+#include "LightAndTextStates.h"
+#include "PushManager.h"
 
-#define PUSH_INTERFACE 1
-#define PUSH_PROD_ID 21
-#define PUSH_VEND_ID 2536
 #define msleep(x) usleep(x * 1000)
 
 ////////////////////
 //  PRIVATE VARS  //
 ////////////////////
 
-void initAll()
+/*
+TCPServer * server;
+
+void padHandlerFunc(void * sub, void * args)
 {
-  char pass = 0;
-  switch(pass)
+  padPacket * pkt = args;
+
+  if (pkt->isHold) return;
+
+  SocketUtils_TCPServerSend(server, pkt, sizeof(AbletonPkt_pad), TCP_PacketType_PAD);
+
+  if (pkt->isPress)
   {
-    case 0:
-      if(pushEventManagerInit()) { pass++; }
-      else { break; }
-    case 100:
-      if(physicalPushStateInit()) { pass++; }
-      else { break; }
-    case 101:
-      if(systemManagerInit()) { pass++; }
-      else { break; }
-    case 102:
-      if(pushOutputStateInit()) { pass++; }
-      else { break; }
-    default:
-    break;
+    outputMessageBuilder_setPadColor(pkt->padX, pkt->padY, ColorStates_DARK_RED);
+  }
+  else
+  {
+    outputMessageBuilder_setPadColor(pkt->padX, pkt->padY, defaultColor(pkt->id));
+  }
+}
+
+void knobHandlerFunc(void * sub, void * args)
+{
+  knobPacket * pkt = args;
+  SocketUtils_TCPServerSend(server, pkt, sizeof(AbletonPkt_knob), TCP_PacketType_KNOB);
+}
+
+void USB_Controler()
+{
+  const unsigned short port = 9988;
+  printf("Waiting for client\n");
+  server = SocketUtils_initTCPServer(port);
+
+  SocketUtils_freeTCPServer(server);
+}
+*/
+
+static char stop = 0;
+
+
+void onBtnEvent(void * sub, void * args)
+{
+  buttonPacket * pkt = args;
+  if (pkt->btnId == 3)
+  {
+    stop = 1;
+  }
+}
+
+ColorStates defaultPadColor(int x, int y)
+{
+  int val = x + y * 8;
+  val -= (y / 2) * 3;
+  
+  if (y % 2 != 0)
+  {
+    val -= 5;
   }
 
-  if(pass == 4) //all 4 of the inits pass
+  if (val % 7 == 0)
+    return 24;
+  
+  return ColorStates_WHITE;
+}
+
+void initColors()
+{
+  for (int x = 0; x < 8; x++)
+    for (int y = 0; y < 8; y++)
+      outputMessageBuilder_setPadColor(x, y, defaultPadColor(x, y));
+}
+
+void onPadEvent(void * sub, void * args)
+{
+  padPacket * pkt = args;
+  
+  if (pkt->isPress)
   {
-    return;
+    outputMessageBuilder_setPadColor(pkt->padX, pkt->padY, ColorStates_DARK_GREEN);
   }
 
-  printf("Init fail. attemting to exit\n");
-
-  switch(pass)
+  if (pkt->isRelease)
   {
-    case 3:
-    freePushOutputState();
-    case 2:
-    destroySystemManager();
-    case 1:
-    freephysicalPushModel();
-    case 0:
-    freePushEventManager();
-    default:
-    break;
+    outputMessageBuilder_setPadColor(pkt->padX, pkt->padY, defaultPadColor(pkt->padX, pkt->padY));
   }
-
-  exit(1);
 }
 
 int main()
 {
-  libusb_context *context = NULL;
-  libusb_init(&context);
-  pushUsbDevice_init(PUSH_INTERFACE, PUSH_PROD_ID, PUSH_VEND_ID, context);
+  PushManager_Init();
 
-  initAll();
+  char padHandler;
+  char btnHandler;
+  pushEventManager_subscribeToNewPadPackets(&padHandler, onPadEvent);
+  pushEventManager_subscribeToNewButtonPackets(&btnHandler, onBtnEvent);
 
-  systemLoop();
+  initColors();
 
-  freePushOutputState();
-  destroySystemManager();
-  freephysicalPushModel();
-  freePushEventManager();
+  //PushManager_InitServerOnPort(9988);
 
-  freeUsb();
+  while (!stop)
+  {
+    PushManager_Cycle();
+  }
+  
+  pushEventManager_unsubscribeToNewPadPackets(&padHandler);
+  pushEventManager_unsubscribeToNewButtonPackets(&btnHandler);
+
+  PushManager_Free();
 }
