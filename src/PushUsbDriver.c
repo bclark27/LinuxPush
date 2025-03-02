@@ -1,46 +1,47 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <libusb-1.0/libusb.h>
-#include <string.h>
+#include "comm/USB.h"
 
 #include "PushUsbDriver.h"
 
-#define WAIT_TIME 7
+
+#define PUSH_INTERFACE 1
+#define PUSH_PROD_ID 21
+#define PUSH_VEND_ID 2536
 
 /////////////
 //  TYPES  //
 /////////////
 
-typedef struct usbDevice
+
+typedef struct usbDriverState
 {
-  libusb_device_handle *handle;
-  libusb_device *device;
-  int interface;
-  int productID;
-  int vendorID;
-  int endpoint_in_address;
-  int endpoint_out_address;
-} usbDevice;
+  USB_handle* handle;
+} usbDriverState;
 
 ////////////////////
 //  PRIVATE VARS  //
 ////////////////////
 
-static usbDevice instance;
-static usbDevice * self = &instance;
+static usbDriverState instance;
+static usbDriverState * self = &instance;
 
 /////////////////////////////
 //  FUNCTION DECLERATIONS  //
 /////////////////////////////
 
-static void print_device(libusb_device *dev);
 
 ///////////////////////
 // PUBLIC FUNCTIONS  //
 ///////////////////////
 
-void pushUsbDevice_init(int interface, int productID, int vendorID, libusb_context *context)
+void PushUsbDriver_init()
 {
+  
+  memset(self, 0, sizeof(usbDriverState));
+
+  self->handle = USB_init(PUSH_INTERFACE, PUSH_PROD_ID, PUSH_VEND_ID);
+
+  /*
+
   memset(self, 0, sizeof(usbDevice));
   self->interface = interface;
   self->productID = productID;
@@ -106,10 +107,15 @@ void pushUsbDevice_init(int interface, int productID, int vendorID, libusb_conte
   endpoint_desc = &inter_desc->endpoint[1];
   self->endpoint_in_address = endpoint_desc->bEndpointAddress;
   //endpoint_desc->bEndpointAddress;
+  //
+  */
 }
 
-int read_data(unsigned char* data, int size)
+int PushUsbDriver_read_data(unsigned char* data, int size)
 {
+  return USB_read_data(self->handle, data, size);
+  /*
+
   if(size < 8)
   {
     return 0;
@@ -154,10 +160,14 @@ int read_data(unsigned char* data, int size)
 
   //printf("Return: %d\n", actual+4);
   return actual + 4;
+  */
 }
 
-int send_data(unsigned char* data, int size)
+int PushUsbDriver_send_data(unsigned char* data, int size)
 {
+  return USB_send_data(self->handle, data, size);
+  /*
+
   if(size == 0 || !self)
   {
     return 0;
@@ -171,10 +181,17 @@ int send_data(unsigned char* data, int size)
     printf("Write Error code: %d\nAmount sent: %d\n", r, actual);
   }
   return actual;
+
+  */
 }
 
-void freeUsb()
+void PushUsbDriver_free()
 {
+  USB_free(self->handle);
+  self->handle = NULL;
+  USB_destroy_context();
+  /*
+
   if(self->handle)
   {
     if(self->interface)
@@ -183,11 +200,15 @@ void freeUsb()
     }
     libusb_close(self->handle);
   }
+
+  */
 }
 
 //////////////////////////
 //     PRIVATE FUNCS    //
 //////////////////////////
+
+/*
 
 static void print_device(libusb_device *dev)
 {
@@ -245,3 +266,5 @@ static void print_device(libusb_device *dev)
   printf("\n");
   libusb_free_config_descriptor(config);
 }
+
+*/

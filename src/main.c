@@ -1,5 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "OutputMessageBuilder.h"
 #include "PushEventManager.h"
 #include "LightAndTextStates.h"
@@ -53,7 +51,7 @@ static char stop = 0;
 
 void onBtnEvent(void * sub, void * args)
 {
-  buttonPacket * pkt = args;
+  AbletonPkt_button * pkt = args;
   if (pkt->btnId == 3)
   {
     stop = 1;
@@ -85,7 +83,7 @@ void initColors()
 
 void onPadEvent(void * sub, void * args)
 {
-  padPacket * pkt = args;
+  AbletonPkt_pad * pkt = args;
   
   if (pkt->isPress)
   {

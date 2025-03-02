@@ -1,7 +1,5 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include "EventSubscription.h"
 #include "LightAndTextStates.h"
 #include "PushUsbDriver.h"
 
@@ -294,7 +292,7 @@ static void sendUpdate()
 {
   if(self->outputSignalSize)
   {
-    int sentAmount = send_data(self->outputSignal, self->outputSignalSize);
+    int sentAmount = PushUsbDriver_send_data(self->outputSignal, self->outputSignalSize);
     if(sentAmount == self->outputSignalSize)
     {
       self->outputSignalSize = 0;

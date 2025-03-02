@@ -10,7 +10,7 @@
 
 void PushManager_Init();
 void PushManager_Free();
-void PushManager_InitServerOnPort(unsigned short port);
+void PushManager_InitServer(const char* name);
 void PushManager_FreeServer();
 
 void PushManager_Cycle();

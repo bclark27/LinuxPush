@@ -1,8 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include "EventSubscription.h"
 #include "PushUsbDriver.h"
+#include "comm/List.h"
 
 #include "PushEventManager.h"
 
@@ -49,18 +49,18 @@ enum PUSH_PKT_EVENT_CLASS {
 //  FUNCTION DECLERATIONS  //
 /////////////////////////////
 
-static pushEventPacket * createPushEventPacket(unsigned int data);
-static padPacket * pushPktToPadPkt(pushEventPacket * pkt);
-static knobPacket * pushPktToKnobPkt(pushEventPacket * pkt);
-static sliderPacket * pushPktToSliderPkt(pushEventPacket * pkt);
-static buttonPacket * pushPktToButtonPkt(pushEventPacket * pkt);
-static void digestPacket(pushEventPacket * pkt);
+static AbletonPkt_pushEvent * createPushEventPacket(unsigned int data);
+static AbletonPkt_pad * pushPktToPadPkt(AbletonPkt_pushEvent * pkt);
+static AbletonPkt_knob * pushPktToKnobPkt(AbletonPkt_pushEvent * pkt);
+static AbletonPkt_slider * pushPktToSliderPkt(AbletonPkt_pushEvent * pkt);
+static AbletonPkt_button * pushPktToButtonPkt(AbletonPkt_pushEvent * pkt);
+static void digestPacket(AbletonPkt_pushEvent * pkt);
 static void parseInBufferData();
-static pushEventPacket * popEventPacket();
-static padPacket * popPadPacket();
-static knobPacket * popKnobPacket();
-static buttonPacket * popButtonPacket();
-static sliderPacket * popSliderPacket();
+static AbletonPkt_pushEvent * popEventPacket();
+static AbletonPkt_pad * popPadPacket();
+static AbletonPkt_knob * popKnobPacket();
+static AbletonPkt_button * popButtonPacket();
+static AbletonPkt_slider * popSliderPacket();
 static void freeEventPacket(void * pkt);
 static void freePushEventPacketChain(List * chain);
 static void sendPushPackets();
@@ -84,20 +84,20 @@ char pushEventManager_init()
 {
   memset(self, 0, sizeof(EventManager));
 
-  self->newEventPacketSubscriptionChain = subscriptionChainInit();
-  self->pushEventPacketChain = listInit();
+  self->newEventPacketSubscriptionChain = subChain_subscriptionChainInit();
+  self->pushEventPacketChain = Queue_init(sizeof(void*), false, freeEventPacket);
 
-  self->newSliderSubscriptionChain = subscriptionChainInit();
-  self->pushSliderPacketChain = listInit();
+  self->newSliderSubscriptionChain = subChain_subscriptionChainInit();
+  self->pushSliderPacketChain = Queue_init(sizeof(void*), false, freeEventPacket);
 
-  self->newButtonSubscriptionChain = subscriptionChainInit();
-  self->pushButtonPacketChain = listInit();
+  self->newButtonSubscriptionChain = subChain_subscriptionChainInit();
+  self->pushButtonPacketChain = Queue_init(sizeof(void*), false, freeEventPacket);
 
-  self->newPadSubscriptionChain = subscriptionChainInit();
-  self->pushPadPacketChain = listInit();
+  self->newPadSubscriptionChain = subChain_subscriptionChainInit();
+  self->pushPadPacketChain = Queue_init(sizeof(void*), false, freeEventPacket);
 
-  self->newKnobSubscriptionChain = subscriptionChainInit();
-  self->pushKnobPacketChain = listInit();
+  self->newKnobSubscriptionChain = subChain_subscriptionChainInit();
+  self->pushKnobPacketChain = Queue_init(sizeof(void*), false, freeEventPacket);
 
   if(self->newEventPacketSubscriptionChain && self->pushEventPacketChain &&
     self->newPadSubscriptionChain && self->pushPadPacketChain &&
@@ -112,11 +112,11 @@ char pushEventManager_init()
 
 void pushEventManager_free()
 {
-  freeSubscriptionChain(self->newEventPacketSubscriptionChain);
-  freeSubscriptionChain(self->newPadSubscriptionChain);
-  freeSubscriptionChain(self->newButtonSubscriptionChain);
-  freeSubscriptionChain(self->newSliderSubscriptionChain);
-  freeSubscriptionChain(self->newKnobSubscriptionChain);
+  subChain_freeSubscriptionChain(self->newEventPacketSubscriptionChain);
+  subChain_freeSubscriptionChain(self->newPadSubscriptionChain);
+  subChain_freeSubscriptionChain(self->newButtonSubscriptionChain);
+  subChain_freeSubscriptionChain(self->newSliderSubscriptionChain);
+  subChain_freeSubscriptionChain(self->newKnobSubscriptionChain);
 
   freePushEventPacketChain(self->pushEventPacketChain);
   freePushEventPacketChain(self->pushPadPacketChain);
@@ -127,7 +127,7 @@ void pushEventManager_free()
 
 void pushEventManager_readNewUsbData()
 {
-  self->readAmount = read_data(self->dataInBuffer, DATA_IN_SIZE);
+  self->readAmount = PushUsbDriver_read_data(self->dataInBuffer, DATA_IN_SIZE);
   if(self->readAmount)
   {
     parseInBufferData();
@@ -145,52 +145,52 @@ void pushEventManager_useNewPackets()
 
 char pushEventManager_subscribeToNewPushPackets(void * subscriber, EventHandle handle)
 {
-  return addSubscription(self->newEventPacketSubscriptionChain, subscriber, handle);
+  return subChain_addSubscription(self->newEventPacketSubscriptionChain, subscriber, handle);
 }
 
 void pushEventManager_unsubscribeToNewPushPackets(void * subscriber)
 {
-  removeSubscription(self->newEventPacketSubscriptionChain, subscriber);
+  subChain_removeSubscription(self->newEventPacketSubscriptionChain, subscriber);
 }
 
 char pushEventManager_subscribeToNewPadPackets(void * subscriber, EventHandle handle)
 {
-  return addSubscription(self->newPadSubscriptionChain, subscriber, handle);
+  return subChain_addSubscription(self->newPadSubscriptionChain, subscriber, handle);
 }
 
 void pushEventManager_unsubscribeToNewPadPackets(void * subscriber)
 {
-  removeSubscription(self->newPadSubscriptionChain, subscriber);
+  subChain_removeSubscription(self->newPadSubscriptionChain, subscriber);
 }
 
 char pushEventManager_subscribeToNewSliderPackets(void * subscriber, EventHandle handle)
 {
-  return addSubscription(self->newSliderSubscriptionChain, subscriber, handle);
+  return subChain_addSubscription(self->newSliderSubscriptionChain, subscriber, handle);
 }
 
 void pushEventManager_unsubscribeToNewSliderPackets(void * subscriber)
 {
-  removeSubscription(self->newSliderSubscriptionChain, subscriber);
+  subChain_removeSubscription(self->newSliderSubscriptionChain, subscriber);
 }
 
 char pushEventManager_subscribeToNewButtonPackets(void * subscriber, EventHandle handle)
 {
-  return addSubscription(self->newButtonSubscriptionChain, subscriber, handle);
+  return subChain_addSubscription(self->newButtonSubscriptionChain, subscriber, handle);
 }
 
 void pushEventManager_unsubscribeToNewButtonPackets(void * subscriber)
 {
-  removeSubscription(self->newButtonSubscriptionChain, subscriber);
+  subChain_removeSubscription(self->newButtonSubscriptionChain, subscriber);
 }
 
 char pushEventManager_subscribeToNewKnobPackets(void * subscriber, EventHandle handle)
 {
-  return addSubscription(self->newKnobSubscriptionChain, subscriber, handle);
+  return subChain_addSubscription(self->newKnobSubscriptionChain, subscriber, handle);
 }
 
 void pushEventManager_unsubscribeToNewKnobPackets(void * subscriber)
 {
-  removeSubscription(self->newKnobSubscriptionChain, subscriber);
+  subChain_removeSubscription(self->newKnobSubscriptionChain, subscriber);
 }
 
 PktType pushEventManager_packetType(void * pkt)
@@ -204,7 +204,7 @@ void pushEventManager_printPushPacket(void * pkt)
   switch(type)
   {
     case PUSH_PKT_TYPE: ;
-      pushEventPacket * pushPkt = pkt;
+      AbletonPkt_pushEvent * pushPkt = pkt;
       printf("Packet Type: General\n");
       printf("Packet Data: 0x%08x\n", pushPkt->data);
       if(pushPkt->event_class == PAD_EVENT){
@@ -221,28 +221,28 @@ void pushEventManager_printPushPacket(void * pkt)
     break;
 
     case PAD_PKT_TYPE: ;
-      padPacket * pPacket = pkt;
+      AbletonPkt_pad* pPacket = pkt;
       printf("Packet Type: Pad\n");
       printf("Packet Data: 0x%08x\n", pPacket->data);
       printf("ID: %i\nX: %i\nY: %i\nVel: %i\nPressed: %i\nHold: %i\nRelease: %i\n", pPacket->id, pPacket->padX, pPacket->padY, pPacket->padVelocity, pPacket->isPress, pPacket->isHold, pPacket->isRelease);
     break;
 
     case KNOB_PKT_TYPE: ;
-      knobPacket * kPacket = pkt;
+      AbletonPkt_knob* kPacket = pkt;
       printf("Packet Type: Knob\n");
       printf("Packet Data: 0x%08x\n", kPacket->data);
       printf("ID: %i\nDirection: %i\nPress: %i\nTurning: %i\nRelease: %i\n", kPacket->id, kPacket->direction, kPacket->isPress, kPacket->isTurning, kPacket->isRelease);
     break;
 
     case BUTTON_PKT_TYPE: ;
-      buttonPacket * btnPacket = pkt;
+      AbletonPkt_button* btnPacket = pkt;
       printf("Packet Type: Button\n");
       printf("Packet Data: 0x%08x\n", btnPacket->data);
       printf("ID: %i\nPress: %i\nRelease: %i\n", btnPacket->btnId, btnPacket->isPress, btnPacket->isRelease);
     break;
 
     case SLIDER_PKT_TYPE: ;
-      sliderPacket * sPacket = pkt;
+      AbletonPkt_slider* sPacket = pkt;
       printf("Packet Type: Slider\n");
       printf("Packet Data: 0x%08x\n", sPacket->data);
       printf("Value: %i\nPercent: %f\nSliding: %i\nPress: %i\nRelease: %i\n", sPacket->value, sPacket->percent, sPacket->isSliding, sPacket->isPress, sPacket->isRelease);
@@ -258,9 +258,9 @@ void pushEventManager_printPushPacket(void * pkt)
 //  PRIVATE FUNCTIONS  //
 /////////////////////////
 
-static pushEventPacket * createPushEventPacket(unsigned int data)
+static AbletonPkt_pushEvent * createPushEventPacket(unsigned int data)
 {
-  pushEventPacket * e = (pushEventPacket*)malloc(sizeof(pushEventPacket));
+  AbletonPkt_pushEvent * e = (AbletonPkt_pushEvent*)malloc(sizeof(AbletonPkt_pushEvent));
   e->pktType = PUSH_PKT_TYPE;
   e->data = data;
 
@@ -357,9 +357,9 @@ static pushEventPacket * createPushEventPacket(unsigned int data)
   return e;
 }
 
-static padPacket * pushPktToPadPkt(pushEventPacket * pkt)
+static AbletonPkt_pad * pushPktToPadPkt(AbletonPkt_pushEvent * pkt)
 {
-  padPacket * padPkt = malloc(sizeof(padPacket));
+  AbletonPkt_pad * padPkt = malloc(sizeof(AbletonPkt_pad));
   if(!padPkt) return NULL;
 
   padPkt->pktType = PAD_PKT_TYPE;
@@ -375,9 +375,9 @@ static padPacket * pushPktToPadPkt(pushEventPacket * pkt)
   return padPkt;
 }
 
-static knobPacket * pushPktToKnobPkt(pushEventPacket * pkt)
+static AbletonPkt_knob * pushPktToKnobPkt(AbletonPkt_pushEvent * pkt)
 {
-  knobPacket * knobPkt = malloc(sizeof(knobPacket));
+  AbletonPkt_knob * knobPkt = malloc(sizeof(AbletonPkt_knob));
   if(!knobPkt) return NULL;
 
   knobPkt->pktType = KNOB_PKT_TYPE;
@@ -390,9 +390,9 @@ static knobPacket * pushPktToKnobPkt(pushEventPacket * pkt)
   return knobPkt;
 }
 
-static sliderPacket * pushPktToSliderPkt(pushEventPacket * pkt)
+static AbletonPkt_slider * pushPktToSliderPkt(AbletonPkt_pushEvent * pkt)
 {
-  sliderPacket * sliderPkt = malloc(sizeof(sliderPacket));
+  AbletonPkt_slider * sliderPkt = malloc(sizeof(AbletonPkt_slider));
   if(!sliderPkt) return NULL;
 
   sliderPkt->pktType = SLIDER_PKT_TYPE;
@@ -406,9 +406,9 @@ static sliderPacket * pushPktToSliderPkt(pushEventPacket * pkt)
   return sliderPkt;
 }
 
-static buttonPacket * pushPktToButtonPkt(pushEventPacket * pkt)
+static AbletonPkt_button * pushPktToButtonPkt(AbletonPkt_pushEvent * pkt)
 {
-  buttonPacket * buttonPkt = malloc(sizeof(buttonPacket));
+  AbletonPkt_button * buttonPkt = malloc(sizeof(AbletonPkt_button));
   if(!buttonPkt) return NULL;
 
   buttonPkt->pktType = BUTTON_PKT_TYPE;
@@ -420,28 +420,28 @@ static buttonPacket * pushPktToButtonPkt(pushEventPacket * pkt)
   return buttonPkt;
 }
 
-static void digestPacket(pushEventPacket * pkt)
+static void digestPacket(AbletonPkt_pushEvent * pkt)
 {
   switch(pkt->event_class)
   {
     case PAD_EVENT: ;
-      padPacket * padPkt = pushPktToPadPkt(pkt);
-      if(padPkt) queue(self->pushPadPacketChain, padPkt);
+      AbletonPkt_pad* padPkt = pushPktToPadPkt(pkt);
+      if(padPkt) Queue_queue(self->pushPadPacketChain, padPkt);
       return;
 
     case BUTTON_EVENT: ;
-      buttonPacket * buttonPkt = pushPktToButtonPkt(pkt);
-      if(buttonPkt) queue(self->pushButtonPacketChain, buttonPkt);
+      AbletonPkt_button* buttonPkt = pushPktToButtonPkt(pkt);
+      if(buttonPkt) Queue_queue(self->pushButtonPacketChain, buttonPkt);
       return;
 
     case KNOB_EVENT: ;
-      knobPacket * knobPkt = pushPktToKnobPkt(pkt);
-      if(knobPkt) queue(self->pushKnobPacketChain, knobPkt);
+      AbletonPkt_knob* knobPkt = pushPktToKnobPkt(pkt);
+      if(knobPkt) Queue_queue(self->pushKnobPacketChain, knobPkt);
       return;
 
     case SLIDER_EVENT: ;
-      sliderPacket * sliderPkt = pushPktToSliderPkt(pkt);
-      if(sliderPkt) queue(self->pushSliderPacketChain, sliderPkt);
+      AbletonPkt_slider* sliderPkt = pushPktToSliderPkt(pkt);
+      if(sliderPkt) Queue_queue(self->pushSliderPacketChain, sliderPkt);
       return;
 
     default:
@@ -459,37 +459,37 @@ static void parseInBufferData()
   {
     unsigned int data = data_ptr[i];
     if(data == 0) continue;
-    pushEventPacket * pkt = createPushEventPacket(data);
+    AbletonPkt_pushEvent* pkt = createPushEventPacket(data);
     digestPacket(pkt);
-    queue(self->pushEventPacketChain, pkt);
+    Queue_queue(self->pushEventPacketChain, pkt);
   }
 
   self->readAmount = 0;
 }
 
-static pushEventPacket * popEventPacket()
+static AbletonPkt_pushEvent * popEventPacket()
 {
-  return dequeue(self->pushEventPacketChain);
+  return Queue_dequeue(self->pushEventPacketChain);
 }
 
-static padPacket * popPadPacket()
+static AbletonPkt_pad * popPadPacket()
 {
-  return dequeue(self->pushPadPacketChain);
+  return Queue_dequeue(self->pushPadPacketChain);
 }
 
-static knobPacket * popKnobPacket()
+static AbletonPkt_knob * popKnobPacket()
 {
-  return dequeue(self->pushKnobPacketChain);
+  return Queue_dequeue(self->pushKnobPacketChain);
 }
 
-static buttonPacket * popButtonPacket()
+static AbletonPkt_button * popButtonPacket()
 {
-  return dequeue(self->pushButtonPacketChain);
+  return Queue_dequeue(self->pushButtonPacketChain);
 }
 
-static sliderPacket * popSliderPacket()
+static AbletonPkt_slider * popSliderPacket()
 {
-  return dequeue(self->pushSliderPacketChain);
+  return Queue_dequeue(self->pushSliderPacketChain);
 }
 
 static void freeEventPacket(void * pkt)
@@ -499,19 +499,19 @@ static void freeEventPacket(void * pkt)
 
 static void freePushEventPacketChain(List * chain)
 {
-  destroyList(chain, freeEventPacket);
+  Queue_free(chain);
 }
 
 static void sendPushPackets()
 {
   if(self->pushEventPacketChain)
   {
-    pushEventPacket * pkt = (pushEventPacket *)popEventPacket();
+    AbletonPkt_pushEvent * pkt = (AbletonPkt_pushEvent *)popEventPacket();
     while(pkt)
     {
-      eventTrigger(self->newEventPacketSubscriptionChain, pkt);
+      subChain_eventTrigger(self->newEventPacketSubscriptionChain, pkt);
       freeEventPacket(pkt);
-      pkt = (pushEventPacket *)popEventPacket();
+      pkt = (AbletonPkt_pushEvent *)popEventPacket();
     }
   }
 }
@@ -520,12 +520,12 @@ static void sendPadPackets()
 {
   if(self->pushPadPacketChain)
   {
-    padPacket * pkt = (padPacket *)popPadPacket();
+    AbletonPkt_pad * pkt = (AbletonPkt_pad *)popPadPacket();
     while(pkt)
     {
-      eventTrigger(self->newPadSubscriptionChain, pkt);
+      subChain_eventTrigger(self->newPadSubscriptionChain, pkt);
       freeEventPacket(pkt);
-      pkt = (padPacket *)popPadPacket();
+      pkt = (AbletonPkt_pad *)popPadPacket();
     }
   }
 }
@@ -534,12 +534,12 @@ static void sendKnobPackets()
 {
   if(self->pushKnobPacketChain)
   {
-    knobPacket * pkt = (knobPacket *)popKnobPacket();
+    AbletonPkt_knob * pkt = (AbletonPkt_knob *)popKnobPacket();
     while(pkt)
     {
-      eventTrigger(self->newKnobSubscriptionChain, pkt);
+      subChain_eventTrigger(self->newKnobSubscriptionChain, pkt);
       freeEventPacket(pkt);
-      pkt = (knobPacket *)popKnobPacket();
+      pkt = (AbletonPkt_knob *)popKnobPacket();
     }
   }
 }
@@ -548,12 +548,12 @@ static void sendSliderPackets()
 {
   if(self->pushSliderPacketChain)
   {
-    sliderPacket * pkt = (sliderPacket *)popSliderPacket();
+    AbletonPkt_slider * pkt = (AbletonPkt_slider *)popSliderPacket();
     while(pkt)
     {
-      eventTrigger(self->newSliderSubscriptionChain, pkt);
+      subChain_eventTrigger(self->newSliderSubscriptionChain, pkt);
       freeEventPacket(pkt);
-      pkt = (sliderPacket *)popSliderPacket();
+      pkt = (AbletonPkt_slider *)popSliderPacket();
     }
   }
 }
@@ -562,12 +562,12 @@ static void sendButtonPackets()
 {
   if(self->pushButtonPacketChain)
   {
-    buttonPacket * pkt = (buttonPacket *)popButtonPacket();
+    AbletonPkt_button * pkt = (AbletonPkt_button *)popButtonPacket();
     while(pkt)
     {
-      eventTrigger(self->newButtonSubscriptionChain, pkt);
+      subChain_eventTrigger(self->newButtonSubscriptionChain, pkt);
       freeEventPacket(pkt);
-      pkt = (buttonPacket *)popButtonPacket();
+      pkt = (AbletonPkt_button *)popButtonPacket();
     }
   }
 }

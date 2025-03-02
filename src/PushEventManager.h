@@ -1,7 +1,8 @@
 #ifndef PUSH_EVENT_CREATOR_H_
 #define PUSH_EVENT_CREATOR_H_
 
-#include "EventSubscription.h"
+#include "comm/EventSubscription.h"
+#include "comm/IPC.h"
 
 ///////////
 // TYPES //
@@ -34,71 +35,6 @@ typedef enum PktType {
   KNOB_PKT_TYPE,
   SLIDER_PKT_TYPE,
 } PktType;
-
-typedef struct pushEventPacket {
-
-  unsigned char pktType;
-  float slider_percent;
-  unsigned int slider_value;
-  unsigned int data;
-  int knob_delta;
-  int pad_x;
-  int pad_y;
-
-  unsigned char pad_velocity;
-  unsigned char pad_state;
-  unsigned char knob_state;
-  unsigned char knob_id;
-  unsigned char btn_id;
-  unsigned char btn_state;
-  unsigned char slider_state;
-  unsigned char event_class;
-} pushEventPacket;
-
-typedef struct padPacket
-{
-  unsigned char pktType;
-  unsigned int data;
-  int id;
-  int padX;
-  int padY;
-  unsigned char isPress;
-  unsigned char isHold;
-  unsigned char isRelease;
-  unsigned char padVelocity;
-} padPacket;
-
-typedef struct knobPacket
-{
-  unsigned char pktType;
-  unsigned int data;
-  unsigned char id;
-  char direction;
-  unsigned char isPress;
-  unsigned char isTurning;
-  unsigned char isRelease;
-} knobPacket;
-
-typedef struct buttonPacket
-{
-  unsigned char pktType;
-  unsigned int data;
-  unsigned char btnId;
-  unsigned char isPress;
-  unsigned char isRelease;
-
-} buttonPacket;
-
-typedef struct sliderPacket
-{
-  unsigned char pktType;
-  unsigned int data;
-  int value;
-  float percent;
-  unsigned char isSliding;
-  unsigned char isPress;
-  unsigned char isRelease;
-} sliderPacket;
 
 ////////////////////////
 //  PUBLIC FUNCTIONS  //

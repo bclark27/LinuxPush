@@ -3,7 +3,7 @@ CC := gcc# FILL: the compiler
 CCFLAGS := # FILL: compile flags
 DBGFLAGS := -Wall -Werror -g
 CCOBJFLAGS := $(CCFLAGS) -c
-LIBS := -L./lib/ -lsock -lusb-1.0
+LIBS := -L./lib/ -lcomm -lusb-1.0 
 
 # path macros
 BIN_PATH := bin
