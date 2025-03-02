@@ -1,6 +1,8 @@
 #ifndef OUTPUT_MESSAGE_BUILDER_H_
 #define OUTPUT_MESSAGE_BUILDER_H_
 
+#include "comm/IPC.h"
+
 /////////////
 //  TYPES  //
 /////////////

@@ -122,7 +122,30 @@ void PushManager_Cycle()
 
 void onReceivedCommand(MessageType t, void* d, MessageSize s)
 {
-  printf("asdasd\n");
+  if (t < MSG_TYPE_ABL_CMD_PAD || t > MSG_TYPE_ABL_CMD_SYS)
+    return;
+
+  switch (t)
+  {
+    case MSG_TYPE_ABL_CMD_PAD: ;
+      AbletonPkt_Cmd_Pad* padCmd = d;
+
+      if (padCmd->setBlink && padCmd->setColor)
+      {
+        outputMessageBuilder_setPadState(padCmd->x, padCmd->y, padCmd->color, padCmd->blink);
+      }
+      else if (padCmd->setBlink)
+      {
+        outputMessageBuilder_setPadBlink(padCmd->x, padCmd->y, padCmd->blink);
+      }
+      else if (padCmd->setColor)
+      {
+        outputMessageBuilder_setPadColor(padCmd->x, padCmd->y, padCmd->color);
+      }
+      break;
+    default:
+      break;
+  }
 }
 
 void padHandlerFunc(void * sub, void * args)
