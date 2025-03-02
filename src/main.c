@@ -59,7 +59,7 @@ void onPadEvent(void * sub, void * args)
   }
 
 
-  outputMessageBuilder_setText(0, 0, "Hello", 5);
+  outputMessageBuilder_setText(0, 0, "Hello World", 5 + 1 + 5);
 }
 
 int main(int argc, char *argv[])
