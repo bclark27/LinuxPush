@@ -57,13 +57,42 @@ void onPadEvent(void * sub, void * args)
   {
     outputMessageBuilder_setPadColor(pkt->padX, pkt->padY, defaultPadColor(pkt->padX, pkt->padY));
   }
+
+
+  outputMessageBuilder_setText(0, 0, "Hello", 5);
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+  if (argc <= 1 || argc >= 4) {
+    fprintf(stderr, "Usage: %s <hosting service name> [controlling service name]\n", argv[0]);
+    return 1;
+  }
+
+  // Access the arguments
+  char *serviceName = argv[1];
+
   PushManager_Init();
-  int s = PushManager_InitServer("PushEvents");
+  int s = PushManager_InitServer(serviceName);
   printf("server status: %d\n", s);
+
+  if (argc == 3)
+  {
+    char *controllingName = argv[2];
+    printf("Connecting to: %s\n", controllingName);
+    
+    s = -1;
+    while (s != CC_SUCCESS)
+    {
+      s = PushManager_ReceiveCommandsFromService(controllingName);
+      printf("connection status: %d\n", s);
+
+      if (s != CC_SUCCESS)
+        sleep(1);
+    }
+  }
+
+  printf("cycling push\n");
 
   char padHandler;
   char btnHandler;

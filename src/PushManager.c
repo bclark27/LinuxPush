@@ -13,6 +13,7 @@
 
 typedef struct PushManager
 {
+  bool listeningToOtherService;
   bool serverUp;
 } PushManager;
 
@@ -27,6 +28,8 @@ static PushManager * self = &instance;
 //  FUNCTION DECLERATIONS  //
 /////////////////////////////
 
+
+void onReceivedCommand(MessageType t, void* d, MessageSize s);
 void padHandlerFunc(void * sub, void * args);
 void buttonHandlerFunc(void * sub, void * args);
 void knobHandlerFunc(void * sub, void * args);
@@ -39,6 +42,7 @@ void sliderHandlerFunc(void * sub, void * args);
 void PushManager_Init()
 {
     self->serverUp = false;
+    self->listeningToOtherService = false;
     // init the events and also the output state
 
     PushUsbDriver_init();
@@ -76,13 +80,20 @@ int PushManager_InitServer(const char* serverName)
   int ret = IPC_StartService(serverName);
   self->serverUp = ret == 0;
   return ret;
-  /*
+  /*ReceivedCommand
 
     if (self->server)
         return;
 
     self->server = SocketUtils_initTCPServer(port);
   */
+}
+
+int PushManager_ReceiveCommandsFromService(const char* name)
+{
+  if (self->listeningToOtherService)
+    return -1;
+  return IPC_ConnectToService(name, onReceivedCommand);
 }
 
 void PushManager_FreeServer()
@@ -108,6 +119,11 @@ void PushManager_Cycle()
 /////////////////////////
 //  PRIVATE FUNCTIONS  //
 /////////////////////////
+
+void onReceivedCommand(MessageType t, void* d, MessageSize s)
+{
+  printf("asdasd\n");
+}
 
 void padHandlerFunc(void * sub, void * args)
 {

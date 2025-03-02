@@ -11,6 +11,7 @@
 void PushManager_Init();
 void PushManager_Free();
 int PushManager_InitServer(const char* name);
+int PushManager_ReceiveCommandsFromService(const char* name);
 void PushManager_FreeServer();
 
 void PushManager_Cycle();
