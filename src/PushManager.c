@@ -1,5 +1,6 @@
 #include "PushManager.h"
 
+#include "comm/IPC.h"
 #include "PushUsbDriver.h"
 
 /////////////
@@ -12,6 +13,7 @@
 
 typedef struct PushManager
 {
+  bool serverUp;
 } PushManager;
 
 ////////////////////
@@ -36,6 +38,7 @@ void sliderHandlerFunc(void * sub, void * args);
 
 void PushManager_Init()
 {
+    self->serverUp = false;
     // init the events and also the output state
 
     PushUsbDriver_init();
@@ -65,8 +68,14 @@ void PushManager_Free()
     PushUsbDriver_free();
 }
 
-void PushManager_InitServer(const char* serverName)
+int PushManager_InitServer(const char* serverName)
 {
+  if (self->serverUp)
+    return 0;
+
+  int ret = IPC_StartService(serverName);
+  self->serverUp = ret == 0;
+  return ret;
   /*
 
     if (self->server)
@@ -78,6 +87,8 @@ void PushManager_InitServer(const char* serverName)
 
 void PushManager_FreeServer()
 {
+  self->serverUp = false;
+  IPC_CloseService();
   /*
     if (!self->server)
         return;
@@ -100,6 +111,10 @@ void PushManager_Cycle()
 
 void padHandlerFunc(void * sub, void * args)
 {
+  if (!self->serverUp)
+    return;
+
+  IPC_PostMessage(MSG_TYPE_ABL_PAD, args, sizeof(AbletonPkt_pad));
   /*
 
     if (self->server)
@@ -109,6 +124,11 @@ void padHandlerFunc(void * sub, void * args)
 
 void buttonHandlerFunc(void * sub, void * args)
 {
+  if (!self->serverUp)
+    return;
+
+  IPC_PostMessage(MSG_TYPE_ABL_BUTTON, args, sizeof(AbletonPkt_button));
+
   /*
 
     if (self->server)
@@ -118,6 +138,11 @@ void buttonHandlerFunc(void * sub, void * args)
 
 void knobHandlerFunc(void * sub, void * args)
 {
+  if (!self->serverUp)
+    return;
+
+  IPC_PostMessage(MSG_TYPE_ABL_KNOB, args, sizeof(AbletonPkt_knob));
+
   /*
 
     if (self->server)
@@ -127,6 +152,11 @@ void knobHandlerFunc(void * sub, void * args)
 
 void sliderHandlerFunc(void * sub, void * args)
 {
+  if (!self->serverUp)
+    return;
+
+  IPC_PostMessage(MSG_TYPE_ABL_SLIDER, args, sizeof(AbletonPkt_slider));
+
   /*
 
     if (self->server)

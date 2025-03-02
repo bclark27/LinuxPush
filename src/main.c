@@ -9,43 +9,6 @@
 //  PRIVATE VARS  //
 ////////////////////
 
-/*
-TCPServer * server;
-
-void padHandlerFunc(void * sub, void * args)
-{
-  padPacket * pkt = args;
-
-  if (pkt->isHold) return;
-
-  SocketUtils_TCPServerSend(server, pkt, sizeof(AbletonPkt_pad), TCP_PacketType_PAD);
-
-  if (pkt->isPress)
-  {
-    outputMessageBuilder_setPadColor(pkt->padX, pkt->padY, ColorStates_DARK_RED);
-  }
-  else
-  {
-    outputMessageBuilder_setPadColor(pkt->padX, pkt->padY, defaultColor(pkt->id));
-  }
-}
-
-void knobHandlerFunc(void * sub, void * args)
-{
-  knobPacket * pkt = args;
-  SocketUtils_TCPServerSend(server, pkt, sizeof(AbletonPkt_knob), TCP_PacketType_KNOB);
-}
-
-void USB_Controler()
-{
-  const unsigned short port = 9988;
-  printf("Waiting for client\n");
-  server = SocketUtils_initTCPServer(port);
-
-  SocketUtils_freeTCPServer(server);
-}
-*/
-
 static char stop = 0;
 
 
@@ -99,6 +62,8 @@ void onPadEvent(void * sub, void * args)
 int main()
 {
   PushManager_Init();
+  int s = PushManager_InitServer("PushEvents");
+  printf("server status: %d\n", s);
 
   char padHandler;
   char btnHandler;
