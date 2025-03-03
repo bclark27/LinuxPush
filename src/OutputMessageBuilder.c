@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <string.h>
-#include "LightAndTextStates.h"
 #include "PushUsbDriver.h"
 
 #include "OutputMessageBuilder.h"
@@ -229,10 +228,10 @@ static void buildUpdate(unsigned char forceFullUpdate)
         forceFullUpdate)
     {
       padUpdatePacket = 0;
-      padUpdatePacket ^= ((unsigned int)self->workingPushState.padStates[i].color) << 24;//color in byte 3
-      padUpdatePacket ^= (i + 0x24) << 16;//pad id in byte 2
-      padUpdatePacket ^= ((unsigned int)self->workingPushState.padStates[i].blinkState) << 8;
-      padUpdatePacket ^= ((unsigned int)self->workingPushState.padStates[i].status);//status in byte 0 always value 0x69
+      padUpdatePacket |= ((unsigned int)self->workingPushState.padStates[i].color) << 24;//color in byte 3
+      padUpdatePacket |= (i + 0x24) << 16;//pad id in byte 2
+      padUpdatePacket |= ((unsigned int)self->workingPushState.padStates[i].blinkState) << 8;
+      padUpdatePacket |= ((unsigned int)self->workingPushState.padStates[i].status);//status in byte 0 always value 0x69
 
       if(self->outputSignalSize + 4 > OUTPUT_BUFFER_SIZE) sendUpdate(); //send update erly if there will be an overflow
 

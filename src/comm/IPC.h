@@ -164,6 +164,9 @@ typedef struct AbletonPkt_Cmd_Pad
   bool setColor;
   unsigned char color;
 
+  bool useRgb;
+  unsigned char rgb[3];
+
 } AbletonPkt_Cmd_Pad;
 
 typedef struct AbletonPkt_Cmd_Button
@@ -181,6 +184,10 @@ typedef struct AbletonPkt_Cmd_PadButton
 
   bool setColor;
   unsigned char color;
+
+  bool useRgb;
+  unsigned char rgb[3];
+
 } AbletonPkt_Cmd_PadButton;
 
 typedef struct AbletonPkt_Cmd_Text
@@ -189,19 +196,13 @@ typedef struct AbletonPkt_Cmd_Text
   unsigned int y;
   unsigned int length;
   char text[68];
-} AbletonPkt_Cmd_Test;
+} AbletonPkt_Cmd_Text;
 
 typedef struct AbletonPkt_Cmd_Sys
 {
   bool clear;
   bool update;
 } AbletonPkt_Cmd_Sys;
-
-
-
-
-
-
 
 
 

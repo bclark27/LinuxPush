@@ -1,6 +1,5 @@
 #include "OutputMessageBuilder.h"
 #include "PushEventManager.h"
-#include "LightAndTextStates.h"
 #include "PushManager.h"
 
 #define msleep(x) usleep(x * 1000)
@@ -12,7 +11,7 @@
 static char stop = 0;
 
 
-void onBtnEvent(void * sub, void * args)
+void CloseBtnListener(void * sub, void * args)
 {
   AbletonPkt_button * pkt = args;
   if (pkt->btnId == 3)
@@ -23,6 +22,9 @@ void onBtnEvent(void * sub, void * args)
 
 ColorStates defaultPadColor(int x, int y)
 {
+  return ColorStates_WHITE;
+
+
   int val = x + y * 8;
   val -= (y / 2) * 3;
   
@@ -44,23 +46,6 @@ void initColors()
       outputMessageBuilder_setPadColor(x, y, defaultPadColor(x, y));
 }
 
-void onPadEvent(void * sub, void * args)
-{
-  AbletonPkt_pad * pkt = args;
-  
-  if (pkt->isPress)
-  {
-    outputMessageBuilder_setPadColor(pkt->padX, pkt->padY, ColorStates_DARK_GREEN);
-  }
-
-  if (pkt->isRelease)
-  {
-    outputMessageBuilder_setPadColor(pkt->padX, pkt->padY, defaultPadColor(pkt->padX, pkt->padY));
-  }
-
-
-  outputMessageBuilder_setText(0, 0, "Hello World", 5 + 1 + 5);
-}
 
 int main(int argc, char *argv[])
 {
@@ -94,10 +79,8 @@ int main(int argc, char *argv[])
 
   printf("cycling push\n");
 
-  char padHandler;
   char btnHandler;
-  pushEventManager_subscribeToNewPadPackets(&padHandler, onPadEvent);
-  pushEventManager_subscribeToNewButtonPackets(&btnHandler, onBtnEvent);
+  pushEventManager_subscribeToNewButtonPackets(&btnHandler, CloseBtnListener);
 
   initColors();
 
@@ -108,7 +91,6 @@ int main(int argc, char *argv[])
     PushManager_Cycle();
   }
   
-  pushEventManager_unsubscribeToNewPadPackets(&padHandler);
   pushEventManager_unsubscribeToNewButtonPackets(&btnHandler);
 
   PushManager_Free();
