@@ -98,7 +98,7 @@ typedef struct AbletonPkt_button
   unsigned char btnId;
   unsigned char isPress;
   unsigned char isRelease;
-
+  unsigned char isPadBtn;
 } AbletonPkt_button;
 
 typedef struct AbletonPkt_slider

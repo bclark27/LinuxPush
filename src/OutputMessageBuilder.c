@@ -62,6 +62,10 @@ typedef struct PushOutputStateManager
 //  FUNCTION DECELERATIONS  //
 //////////////////////////////
 
+bool btnIdIsBtnPad(unsigned char btnId);
+unsigned char btnIdToBtnPadIdx(unsigned char btnId);
+unsigned char btnPadIdxToBtnId(unsigned char btnPadIdx);
+
 static void pushStateObject_init(pushStateObject * ps);
 static void buildUpdate(unsigned char forceFullUpdate);
 static void sendUpdate(void);
@@ -142,26 +146,29 @@ void outputMessageBuilder_setButtonBlink(unsigned char id, unsigned char blinkSt
 
 void outputMessageBuilder_setButtonPadState(unsigned char id, unsigned char color, unsigned char blinkState)
 {
-  if(id > 0 && id < 16)
+  if(btnIdIsBtnPad(id))
   {
-    self->workingPushState.buttonPadStates[id].color = color;
-    self->workingPushState.buttonPadStates[id].blinkState = blinkState;
+    unsigned char idx = btnIdToBtnPadIdx(id);
+    self->workingPushState.buttonPadStates[idx].color = color;
+    self->workingPushState.buttonPadStates[idx].blinkState = blinkState;
   }
 }
 
 void outputMessageBuilder_setButtonPadColor(unsigned char id, unsigned char color)
 {
-  if(id > 0 && id < 16)
+  if(btnIdIsBtnPad(id))
   {
-    self->workingPushState.buttonPadStates[id].color = color;
+    unsigned char idx = btnIdToBtnPadIdx(id);
+    self->workingPushState.buttonPadStates[idx].color = color;
   }
 }
 
 void outputMessageBuilder_setButtonPadBlink(unsigned char id, unsigned char blinkState)
 {
-  if(id > 0 && id < 16)
+  if(btnIdIsBtnPad(id))
   {
-    self->workingPushState.buttonPadStates[id].blinkState = blinkState;
+    unsigned char idx = btnIdToBtnPadIdx(id);
+    self->workingPushState.buttonPadStates[idx].blinkState = blinkState;
   }
 }
 
@@ -176,6 +183,33 @@ void outputMessageBuilder_setText(int x, int y, char * text, unsigned int length
 /////////////////////////
 //  PRIVATE FUNCTIONS  //
 /////////////////////////
+
+bool btnIdIsBtnPad(unsigned char btnId)
+{
+  return (btnId >= 20 && btnId <= 27) || (btnId >= 102 && btnId <= 109);
+}
+
+unsigned char btnIdToBtnPadIdx(unsigned char btnId)
+{
+  if (btnId >= 20 && btnId <= 27)
+    return btnId - 20;
+
+  if (btnId >= 102 && btnId <= 109)
+    return (btnId - 102) + 8;
+
+  return 0;
+}
+
+unsigned char btnPadIdxToBtnId(unsigned char btnPadIdx)
+{
+  if (btnPadIdx < 8)
+    return btnPadIdx + 20;
+
+  if (btnPadIdx < 16)
+    return (btnPadIdx - 8) + 102;
+  
+  return 0;
+}
 
 void pushStateObject_init(pushStateObject * ps)
 {
@@ -207,7 +241,7 @@ void pushStateObject_init(pushStateObject * ps)
   memset(&(ps->buttonPadStates), 0, sizeof(outputButtonState) * 120);
   for(int i = 0; i < 16; i++)
   {
-    ps->buttonPadStates[i].id = i;
+    ps->buttonPadStates[i].id = btnPadIdxToBtnId(i);
   }
 
   memset(ps->text, 0x20, TEXT_BUFFER_SIZE);
@@ -240,6 +274,43 @@ static void buildUpdate(unsigned char forceFullUpdate)
 
       //update the curr push data
       memcpy(&(self->realPushState.padStates[i]), &(self->workingPushState.padStates[i]), sizeof(outputPadState));
+    }
+  }
+
+  for (int i = 0; i < 120; i++)
+  {
+    if (btnIdIsBtnPad(i))
+      continue;
+
+    if (self->workingPushState.buttonStates[i].blinkState != self->realPushState.buttonStates[i].blinkState)
+    {
+
+      if(self->outputSignalSize + 4 > OUTPUT_BUFFER_SIZE) sendUpdate(); //send update erly if there will be an overflow
+
+      *(self->outputSignal+(self->outputSignalSize++)) = 0x1b;
+      *(self->outputSignal+(self->outputSignalSize++)) = 0xb0;
+      *(self->outputSignal+(self->outputSignalSize++)) = self->workingPushState.buttonStates[i].id;
+      *(self->outputSignal+(self->outputSignalSize++)) = self->workingPushState.buttonStates[i].blinkState;
+      self->realPushState.buttonStates[i].blinkState = self->workingPushState.buttonStates[i].blinkState;
+    }
+  }
+
+  for (int i = 0; i < 16; i++)
+  {
+    unsigned char btnId = btnPadIdxToBtnId(i);
+
+    if (self->workingPushState.buttonPadStates[i].blinkState != self->realPushState.buttonPadStates[i].blinkState ||
+        self->workingPushState.buttonPadStates[i].color != self->realPushState.buttonPadStates[i].color) 
+    {
+      if(self->outputSignalSize + 4 > OUTPUT_BUFFER_SIZE) sendUpdate(); //send update erly if there will be an overflow
+
+      *(self->outputSignal+(self->outputSignalSize++)) = 0x1b;
+      *(self->outputSignal+(self->outputSignalSize++)) = self->workingPushState.buttonPadStates[i].blinkState;
+      *(self->outputSignal+(self->outputSignalSize++)) = btnId;
+      *(self->outputSignal+(self->outputSignalSize++)) = self->workingPushState.buttonPadStates[i].color;
+
+      self->realPushState.buttonPadStates[i].color = self->workingPushState.buttonPadStates[i].color;
+      self->realPushState.buttonPadStates[i].blinkState = self->workingPushState.buttonPadStates[i].blinkState;
     }
   }
 

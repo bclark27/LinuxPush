@@ -416,6 +416,7 @@ static AbletonPkt_button * pushPktToButtonPkt(AbletonPkt_pushEvent * pkt)
   buttonPkt->btnId = pkt->btn_id;
   buttonPkt->isPress = pkt->btn_state == BUTTON_PRESS ? 1 : 0;
   buttonPkt->isRelease = pkt->btn_state == BUTTON_RELEASE ? 1 : 0;
+  buttonPkt->isPadBtn = (pkt->btn_id >= 20 && pkt->btn_id <= 27) || (pkt->btn_id >= 102 && pkt->btn_id <= 109);
 
   return buttonPkt;
 }
@@ -454,7 +455,6 @@ static void parseInBufferData()
   int updateLen = self->readAmount / 4;  //get num of ints
 
   unsigned int* data_ptr = (unsigned int*)self->dataInBuffer;
-
   for(int i = 0; i < updateLen; i++)
   {
     unsigned int data = data_ptr[i];
