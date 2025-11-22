@@ -9,7 +9,6 @@
 ///////////////
 
 
-#define TEXT_LINE_SIZE 68
 #define OUTPUT_BUFFER_SIZE 8192
 #define TEXT_PACKET_SIZE 108
 #define textLine(stateObject, lineNumber) (((unsigned char *)(&(stateObject->text))) + (lineNumber * TEXT_LINE_SIZE))
@@ -56,8 +55,8 @@ char outputMessageBuilder_init()
   memset(self->outputSignal, 0, OUTPUT_BUFFER_SIZE);
   self->outputSignalSize = 0;
 
-  outputMessageBuilder_initStateObj(&self->realPushState);
-  outputMessageBuilder_initStateObj(&self->workingPushState);
+  PushStates_initStateObj(&self->realPushState);
+  PushStates_initStateObj(&self->workingPushState);
 
   return 1;
 }
@@ -65,40 +64,6 @@ char outputMessageBuilder_init()
 void outputMessageBuilder_free()
 {
 
-}
-
-void outputMessageBuilder_initStateObj(pushStateObject* ps)
-{
-  memset(ps, 0, sizeof(pushStateObject));
-
-  outputPadState * pad;
-  for(int y = 0; y < 8; y++)
-  {
-    for(int x = 0; x < 8; x++)
-    {
-      pad = &(ps->padStates[x + (y * 8)]);
-      pad->id = x + (y * 8);
-      pad->x = x;
-      pad->y = y;
-      pad->blinkState = BlinkStates_BlinkOff;
-      pad->color = ColorStates_BLACK;
-      pad->status = 0x69;  //idk why, just let it be
-    }
-  }
-
-  memset(&(ps->buttonStates), 0, sizeof(outputButtonState) * 120);
-  for(int i = 0; i < 120; i++)
-  {
-    ps->buttonStates[i].id = i;
-  }
-
-  memset(&(ps->buttonPadStates), 0, sizeof(outputButtonState) * 120);
-  for(int i = 0; i < 16; i++)
-  {
-    ps->buttonPadStates[i].id = btnPadIdxToBtnId(i);
-  }
-
-  memset(ps->text, 0x20, TEXT_BUFFER_SIZE);
 }
 
 unsigned char outputMessageBuilder_rgbToColor(unsigned char rgb[])
@@ -116,7 +81,7 @@ void outputMessageBuilder_matchStateObj(pushStateObject* ps)
 
 void outputMessageBuilder_clearState()
 {
-  outputMessageBuilder_initStateObj(&self->workingPushState);
+  PushStates_initStateObj(&self->workingPushState);
   buildUpdate(1);
   sendUpdate();
 }
