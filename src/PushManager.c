@@ -35,7 +35,6 @@ void buttonHandlerFunc(void * sub, void * args);
 void knobHandlerFunc(void * sub, void * args);
 void sliderHandlerFunc(void * sub, void * args);
 
-unsigned char rgbToColor(unsigned char rgb[]);
 
 ////////////////////////
 //  PUBLIC FUNCTIONS  //
@@ -136,7 +135,7 @@ void onReceivedCommand(MessageType t, void* d, MessageSize s)
 
       color = padCmd->color;
       if (padCmd->useRgb && padCmd->setColor)
-        color = rgbToColor(padCmd->rgb);
+        color = outputMessageBuilder_rgbToColor(padCmd->rgb);
 
       useColor = padCmd->setColor | padCmd->useRgb;
       if (padCmd->setBlink && useColor)
@@ -167,7 +166,7 @@ void onReceivedCommand(MessageType t, void* d, MessageSize s)
 
       color = pbCmd->color;
       if (pbCmd->useRgb && pbCmd->setColor)
-        color = rgbToColor(pbCmd->rgb);
+        color = outputMessageBuilder_rgbToColor(pbCmd->rgb);
 
       useColor = pbCmd->setColor | pbCmd->useRgb;
       if (pbCmd->setBlink && useColor)
@@ -259,99 +258,4 @@ void sliderHandlerFunc(void * sub, void * args)
     if (self->server)
         SocketUtils_TCPServerSend(self->server, args, sizeof(sliderPacket), TCP_PacketType_SLIDER);
   */
-}
-
-unsigned char hsbToPushColor(float h, float s, float b)
-{
-  /*
-  Convert a HSB to a Push Color
-  param h: Hue from 0-1
-  param s: Saturation from 0-1
-  param b: Brightness from 0-1
-  return: Push color that can be passed to pad_color functions
-  */
-
-  if(s < 0.2)
-  {  //grayscale
-    return (unsigned char)(int)(4 * b);
-  }
-  h += (float)1 / (float)28;
-  if(h > 1)
-  {
-    h -= 1;
-  }
-  unsigned char color = (int)(h * 14) * 4 + 4;
-  if(b < 0.5)
-  {
-    color += 2;
-    if(s < 0.5)
-    {
-      color += 1;
-    }
-  }
-  else if(s >= 0.5)
-  {
-    color += 1;
-  }
-  return color;
-}
-
-void rgbToHsb(float r, float g, float b, float *h, float *s, float *br) 
-{
-    float max, min, delta;
-
-    // Find the maximum and minimum values among r, g, b.
-    max = r;
-    if (g > max) max = g;
-    if (b > max) max = b;
-
-    min = r;
-    if (g < min) min = g;
-    if (b < min) min = b;
-
-    // Set brightness to the maximum value.
-    *br = max;
-
-    // Calculate the difference between the max and min values.
-    delta = max - min;
-
-    // Calculate saturation. If max is 0, the color is black.
-    if (max != 0)
-        *s = delta / max;
-    else {
-        *s = 0;
-        *h = 0;  // Hue is undefined, conventionally set to 0.
-        return;
-    }
-
-    // Calculate hue based on which color is the maximum.
-    if (delta == 0)
-        *h = 0;  // If there is no difference, hue is undefined.
-    else if (r == max)
-        *h = (g - b) / delta;
-    else if (g == max)
-        *h = 2.0f + (b - r) / delta;
-    else  // b == max
-        *h = 4.0f + (r - g) / delta;
-
-    // Convert hue to degrees on the circle (0-360).
-    *h *= 60;
-    if (*h < 0)
-        *h += 360;
-}
-
-unsigned char rgbToPushColor(float r, float g, float b)
-{
-  float h, s, br;
-  rgbToHsb(r,g,b,&h,&s,&br);
-  return hsbToPushColor(h,s,br);
-}
-
-
-unsigned char rgbToColor(unsigned char rgb[])
-{
-  float rf = rgb[0] / (float)255;
-  float gf = rgb[1] / (float)255;
-  float bf = rgb[2] / (float)255;
-  return rgbToPushColor(rf, gf, bf);
 }

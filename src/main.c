@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
   char btnHandler;
   pushEventManager_subscribeToNewButtonPackets(&btnHandler, CloseBtnListener);
 
-  initColors();
+  //initColors();
 
 /*
     padUpdatePacket |= ((unsigned char)0x0b) << 24;//color in byte 3

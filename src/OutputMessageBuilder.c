@@ -8,7 +8,7 @@
 //  DEFINES  //
 ///////////////
 
-#define TEXT_BUFFER_SIZE 272
+
 #define TEXT_LINE_SIZE 68
 #define OUTPUT_BUFFER_SIZE 8192
 #define TEXT_PACKET_SIZE 108
@@ -18,37 +18,6 @@
 /////////////
 //  TYPES  //
 /////////////
-
-typedef struct outputPadState
-{
-  unsigned int id;
-  unsigned int x;
-  unsigned int y;
-  unsigned char color;
-  unsigned char blinkState;
-  unsigned char status;
-} outputPadState;
-
-typedef struct outputButtonState
-{
-  unsigned char id;
-  unsigned char blinkState;
-} outputButtonState;
-
-typedef struct outputButtonPadState
-{
-  unsigned char id;
-  unsigned char color;
-  unsigned char blinkState;
-} outputButtonPadState;
-
-typedef struct pushStateObject
-{
-  outputPadState padStates[64];
-  outputButtonState buttonStates[120];
-  outputButtonPadState buttonPadStates[16];
-  unsigned char text[TEXT_BUFFER_SIZE];
-} pushStateObject;
 
 typedef struct PushOutputStateManager
 {
@@ -66,9 +35,9 @@ bool btnIdIsBtnPad(unsigned char btnId);
 unsigned char btnIdToBtnPadIdx(unsigned char btnId);
 unsigned char btnPadIdxToBtnId(unsigned char btnPadIdx);
 
-static void pushStateObject_init(pushStateObject * ps);
 static void buildUpdate(unsigned char forceFullUpdate);
 static void sendUpdate(void);
+unsigned char rgbToPushColor(float r, float g, float b);
 
 ////////////////////
 //  PRIVATE VARS  //
@@ -87,8 +56,8 @@ char outputMessageBuilder_init()
   memset(self->outputSignal, 0, OUTPUT_BUFFER_SIZE);
   self->outputSignalSize = 0;
 
-  pushStateObject_init(&self->realPushState);
-  pushStateObject_init(&self->workingPushState);
+  outputMessageBuilder_initStateObj(&self->realPushState);
+  outputMessageBuilder_initStateObj(&self->workingPushState);
 
   return 1;
 }
@@ -98,9 +67,56 @@ void outputMessageBuilder_free()
 
 }
 
+void outputMessageBuilder_initStateObj(pushStateObject* ps)
+{
+  memset(ps, 0, sizeof(pushStateObject));
+
+  outputPadState * pad;
+  for(int y = 0; y < 8; y++)
+  {
+    for(int x = 0; x < 8; x++)
+    {
+      pad = &(ps->padStates[x + (y * 8)]);
+      pad->id = x + (y * 8);
+      pad->x = x;
+      pad->y = y;
+      pad->blinkState = BlinkStates_BlinkOff;
+      pad->color = ColorStates_BLACK;
+      pad->status = 0x69;  //idk why, just let it be
+    }
+  }
+
+  memset(&(ps->buttonStates), 0, sizeof(outputButtonState) * 120);
+  for(int i = 0; i < 120; i++)
+  {
+    ps->buttonStates[i].id = i;
+  }
+
+  memset(&(ps->buttonPadStates), 0, sizeof(outputButtonState) * 120);
+  for(int i = 0; i < 16; i++)
+  {
+    ps->buttonPadStates[i].id = btnPadIdxToBtnId(i);
+  }
+
+  memset(ps->text, 0x20, TEXT_BUFFER_SIZE);
+}
+
+unsigned char outputMessageBuilder_rgbToColor(unsigned char rgb[])
+{
+  float rf = rgb[0] / (float)255;
+  float gf = rgb[1] / (float)255;
+  float bf = rgb[2] / (float)255;
+  return rgbToPushColor(rf, gf, bf);
+}
+
+void outputMessageBuilder_matchStateObj(pushStateObject* ps)
+{
+  memcpy(&self->workingPushState, ps, sizeof(pushStateObject));
+}
+
 void outputMessageBuilder_clearState()
 {
-  pushStateObject_init(&self->workingPushState);
+  outputMessageBuilder_initStateObj(&self->workingPushState);
   buildUpdate(1);
   sendUpdate();
 }
@@ -209,42 +225,6 @@ unsigned char btnPadIdxToBtnId(unsigned char btnPadIdx)
     return (btnPadIdx - 8) + 102;
   
   return 0;
-}
-
-void pushStateObject_init(pushStateObject * ps)
-{
-  memset(ps, 0, sizeof(pushStateObject));
-
-  memset(&(ps->padStates), 0, sizeof(outputPadState) * 64);
-
-  outputPadState * pad;
-  for(int y = 0; y < 8; y++)
-  {
-    for(int x = 0; x < 8; x++)
-    {
-      pad = &(ps->padStates[x + (y * 8)]);
-      pad->id = x + (y * 8);
-      pad->x = x;
-      pad->y = y;
-      pad->blinkState = BlinkStates_BlinkOff;
-      pad->color = ColorStates_BLACK;
-      pad->status = 0x69;  //idk why, just let it be
-    }
-  }
-
-  memset(&(ps->buttonStates), 0, sizeof(outputButtonState) * 120);
-  for(int i = 0; i < 120; i++)
-  {
-    ps->buttonStates[i].id = i;
-  }
-
-  memset(&(ps->buttonPadStates), 0, sizeof(outputButtonState) * 120);
-  for(int i = 0; i < 16; i++)
-  {
-    ps->buttonPadStates[i].id = btnPadIdxToBtnId(i);
-  }
-
-  memset(ps->text, 0x20, TEXT_BUFFER_SIZE);
 }
 
 static void buildUpdate(unsigned char forceFullUpdate)
@@ -376,4 +356,91 @@ static void sendUpdate()
       self->outputSignalSize = leftOver;
     }
   }
+}
+
+
+unsigned char hsbToPushColor(float h, float s, float b)
+{
+  /*
+  Convert a HSB to a Push Color
+  param h: Hue from 0-1
+  param s: Saturation from 0-1
+  param b: Brightness from 0-1
+  return: Push color that can be passed to pad_color functions
+  */
+
+  if(s < 0.2)
+  {  //grayscale
+    return (unsigned char)(int)(4 * b);
+  }
+  h += (float)1 / (float)28;
+  if(h > 1)
+  {
+    h -= 1;
+  }
+  unsigned char color = (int)(h * 14) * 4 + 4;
+  if(b < 0.5)
+  {
+    color += 2;
+    if(s < 0.5)
+    {
+      color += 1;
+    }
+  }
+  else if(s >= 0.5)
+  {
+    color += 1;
+  }
+  return color;
+}
+
+void rgbToHsb(float r, float g, float b, float *h, float *s, float *br) 
+{
+    float max, min, delta;
+
+    // Find the maximum and minimum values among r, g, b.
+    max = r;
+    if (g > max) max = g;
+    if (b > max) max = b;
+
+    min = r;
+    if (g < min) min = g;
+    if (b < min) min = b;
+
+    // Set brightness to the maximum value.
+    *br = max;
+
+    // Calculate the difference between the max and min values.
+    delta = max - min;
+
+    // Calculate saturation. If max is 0, the color is black.
+    if (max != 0)
+        *s = delta / max;
+    else {
+        *s = 0;
+        *h = 0;  // Hue is undefined, conventionally set to 0.
+        return;
+    }
+
+    // Calculate hue based on which color is the maximum.
+    if (delta == 0)
+        *h = 0;  // If there is no difference, hue is undefined.
+    else if (r == max)
+        *h = (g - b) / delta;
+    else if (g == max)
+        *h = 2.0f + (b - r) / delta;
+    else  // b == max
+        *h = 4.0f + (r - g) / delta;
+
+    // Convert hue to degrees on the circle (0-360).
+    *h *= 60;
+    if (*h < 0)
+        *h += 360;
+}
+
+unsigned char rgbToPushColor(float r, float g, float b)
+{
+  float h, s, br;
+  rgbToHsb(r,g,b,&h,&s,&br);
+  return hsbToPushColor(h,s,br);
 }
